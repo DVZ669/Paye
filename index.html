@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d12">
+<title>Cycle 8 — Force auto-régulée</title>
+
+<!-- PWA / écran d'accueil iOS -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Cycle 8">
+<meta name="application-name" content="Cycle 8">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<style>
+  :root{
+    --bg:#0b0d12; --panel:#151922; --panel2:#1d2330; --line:#2a313f;
+    --ink:#eef1f6; --dim:#8b93a3; --dimmer:#565d6e;
+    --acc:#e8583a; --gold:#f0a83a; --ok:#4ec98a; --steel:#5b8def; --warn:#e8c34a;
+    --r:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-size:16px;line-height:1.4;overscroll-behavior-y:none}
+  body{padding-bottom:100px}
+  h1,h2,h3{margin:0;font-weight:800;letter-spacing:-0.02em}
+  .wrap{max-width:660px;margin:0 auto;padding:0 14px}
+  header{position:sticky;top:0;z-index:40;background:linear-gradient(180deg,#0b0d12 72%,rgba(11,13,18,0));padding:16px 0 8px}
+  .brand{display:flex;align-items:center;justify-content:space-between;padding:0 14px}
+  .brand .mark{font-size:24px;font-weight:900;letter-spacing:-0.04em}
+  .brand .mark b{color:var(--acc)}
+  .brand .cyc{font-size:11px;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:0.12em;text-align:right}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin:12px 0}
+  .card h2{font-size:19px;margin-bottom:4px}
+  .muted{color:var(--dim);font-size:14px}
+  .tiny{color:var(--dimmer);font-size:12px}
+  label{display:block;font-size:13px;color:var(--dim);font-weight:600;margin:0 0 5px}
+  input,select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+    border-radius:10px;padding:12px;font-size:16px;font-weight:600}
+  input:focus,select:focus{outline:none;border-color:var(--acc)}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:7px;background:var(--acc);color:#fff;
+    border:none;border-radius:11px;padding:14px 18px;font-size:15px;font-weight:800;width:100%}
+  .btn.ghost{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
+  .btn.sm{padding:9px 12px;font-size:13px}
+  .row{display:flex;gap:10px;align-items:center}
+  /* week strip */
+  .weeks{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
+  .weeks::-webkit-scrollbar{display:none}
+  .wk{flex:0 0 auto;min-width:44px;text-align:center;padding:8px 6px;border-radius:10px;
+    background:var(--panel2);border:1px solid var(--line)}
+  .wk .n{font-weight:900;font-size:16px}
+  .wk .p{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:0.06em;font-weight:700}
+  .wk.on{background:var(--acc);border-color:var(--acc);color:#fff}
+  .wk.on .p{color:rgba(255,255,255,0.85)}
+  .wk.deload.on{background:var(--steel);border-color:var(--steel)}
+  .wk.done{opacity:0.5}
+  /* day strip */
+  .days{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none;margin-top:6px}
+  .days::-webkit-scrollbar{display:none}
+  .daybtn{flex:0 0 auto;padding:10px 14px;border-radius:10px;background:var(--panel2);
+    border:1px solid var(--line);font-weight:700;font-size:13px;color:var(--dim)}
+  .daybtn.on{background:var(--steel);color:#fff;border-color:var(--steel)}
+  .daybtn.ok{border-color:var(--ok)}
+  /* exercise */
+  .ex{border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}
+  .ex .top{padding:12px 14px;background:var(--panel2)}
+  .namerow{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .btnrow{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto}
+  .vid{background:rgba(91,141,239,0.12);border:1px solid rgba(91,141,239,0.4);color:var(--steel);
+    font-size:11px;font-weight:700;border-radius:8px;padding:5px 10px;white-space:nowrap}
+  .vid:active{background:rgba(91,141,239,0.25)}
+  .ex .name{font-weight:800;font-size:15px}
+  .swap{flex:0 0 auto;background:transparent;border:1px solid var(--line);color:var(--dim);
+    font-size:11px;font-weight:700;border-radius:8px;padding:5px 9px;white-space:nowrap}
+  .swap:active{background:var(--panel)}
+  .swap.alt{border-color:rgba(232,88,58,0.4);color:var(--acc)}
+  .swaprow{display:flex;gap:6px}
+  .swapwrap{margin-top:8px}
+  .picker{margin-top:10px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px}
+  .pklabel{font-size:12px;color:var(--dim);margin-bottom:8px}
+  .pklabel b{color:var(--ink)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--panel2);border:1px solid var(--line);color:var(--dim);font-size:12px;font-weight:700;
+    border-radius:999px;padding:7px 12px}
+  .chip.on{background:var(--steel);border-color:var(--steel);color:#fff}
+  .ex .meta{font-size:12px;color:var(--dim);margin-top:2px}
+  .ex .cue{font-size:11px;color:var(--gold);margin-top:3px;font-weight:600}
+  .setrow{display:grid;grid-template-columns:30px 1fr 1fr 44px;gap:8px;align-items:center;
+    padding:8px 14px;border-top:1px solid var(--line)}
+  .setrow.main{grid-template-columns:38px 1fr 1fr 1fr 44px}
+  .setrow .si{font-weight:800;color:var(--dim);font-size:13px;text-align:center;line-height:1.1}
+  .setrow input{padding:9px;text-align:center;font-size:15px}
+  .setrow input.rpein{border-color:rgba(240,168,58,0.4);background:rgba(240,168,58,0.06)}
+  .rowhead{display:grid;grid-template-columns:38px 1fr 1fr 1fr 44px;gap:8px;padding:6px 14px 2px;
+    font-size:10px;color:var(--dimmer);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;text-align:center}
+  .rowhead span:first-child{text-align:left}
+  .wuhead{padding:8px 14px 2px;font-size:11px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:0.06em}
+  .setrow.wu{grid-template-columns:38px 1fr 1fr;opacity:0.85}
+  .setrow.wu .wuw{font-weight:700;font-size:14px}
+  .setrow.wu .wur{font-size:13px;color:var(--dim)}
+  .wusep{padding:8px 14px 2px;font-size:11px;font-weight:800;color:var(--steel);text-transform:uppercase;letter-spacing:0.06em;border-top:1px dashed var(--line);margin-top:4px}
+  .chk{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);
+    display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--dimmer)}
+  .chk.done{background:var(--ok);border-color:var(--ok);color:#08130c}
+  /* rpe */
+  .rpe{padding:10px 14px;border-top:1px solid var(--line);background:rgba(240,168,58,0.05)}
+  .rpe .q{font-size:12px;color:var(--gold);font-weight:700;margin-bottom:7px}
+  .rpebtns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .rb{padding:9px 4px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);
+    font-size:11px;font-weight:700;color:var(--dim);text-align:center;line-height:1.15}
+  .rb.on{background:var(--gold);border-color:var(--gold);color:#1a1205}
+  .rb b{display:block;font-size:14px}
+  /* rest bar */
+  .rest{position:fixed;left:0;right:0;bottom:78px;z-index:45;display:none;padding:0 14px}
+  .rest .inner{max-width:660px;margin:0 auto;background:var(--acc);color:#fff;border-radius:14px;
+    padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 30px rgba(0,0,0,0.5)}
+  .rest.show{display:block}
+  .rest .t{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums}
+  .rest .lbl{font-size:11px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.85;font-weight:700}
+  .rest button{background:rgba(255,255,255,0.2);border:none;color:#fff;font-weight:800;border-radius:9px;padding:8px 12px;font-size:13px;margin-left:8px}
+  nav{position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(11,13,18,0.92);backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 0 max(8px,env(safe-area-inset-bottom))}
+  nav button{background:none;border:none;color:var(--dimmer);font-size:10px;font-weight:700;display:flex;
+    flex-direction:column;align-items:center;gap:3px;flex:1;text-transform:uppercase;letter-spacing:0.05em}
+  nav button svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:2}
+  nav button.on{color:var(--acc)}
+  .hide{display:none!important}
+  .note{background:var(--panel2);border-left:3px solid var(--gold);padding:10px 12px;border-radius:0 8px 8px 0;font-size:13px;color:var(--dim);margin:10px 0}
+  .note.blue{border-color:var(--steel)}
+  .miss{background:rgba(232,195,74,0.08);border:1px solid rgba(232,195,74,0.3);border-radius:12px;padding:13px 14px;margin:10px 0}
+  .misshead{font-weight:800;font-size:14px;color:var(--warn);margin-bottom:3px}
+  .misstxt{font-size:13px;color:var(--dim);margin-bottom:10px}
+  .missrow{display:flex;gap:8px}
+  .missrow .btn{width:auto;flex:1}
+  .nextrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+  .nextrow:first-of-type{border-top:none}
+  .nextsel{flex:1}
+  .nextsel select{padding:9px 10px;font-size:14px}
+  .nextrow .r{flex:0 0 auto;color:var(--dim);font-size:13px}
+  .adj{display:inline-block;font-size:11px;font-weight:800;padding:2px 7px;border-radius:6px;margin-left:6px}
+  .adj.up{background:rgba(78,201,138,0.15);color:var(--ok)}
+  .adj.down{background:rgba(232,88,58,0.15);color:var(--acc)}
+  .adj.same{background:rgba(139,147,163,0.15);color:var(--dim)}
+  .pr{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+  .pr .n{font-size:24px;font-weight:900;letter-spacing:-0.03em}
+  .pr .l{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;font-weight:700}
+  .empty{text-align:center;color:var(--dimmer);padding:30px 10px;font-size:14px}
+  .exline{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+  .exline:first-child{border-top:none}
+  .exline .r{color:var(--dim);font-size:13px;flex:0 0 auto;margin-left:10px}
+  .toast{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);background:var(--ok);color:#08130c;
+    padding:11px 18px;border-radius:999px;font-weight:800;font-size:13px;z-index:99;opacity:0;transition:opacity .2s;pointer-events:none;text-align:center;max-width:88%}
+  .toast.show{opacity:1}
+  .bar{height:7px;background:var(--panel2);border-radius:999px;overflow:hidden;margin-top:6px}
+  .bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--gold));border-radius:999px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="mark">CYCLE<b>8</b></div>
+    <div class="cyc" id="cycInfo">Semaine 1 / 8</div>
+  </div>
+</header>
+
+<main class="wrap" id="main"></main>
+
+<div class="rest" id="rest">
+  <div class="inner">
+    <div><div class="lbl">Repos</div><div class="t" id="restT">3:00</div></div>
+    <div class="row"><button onclick="restAdd(30)">+30s</button><button onclick="restStop()">Passer</button></div>
+  </div>
+</div>
+
+<nav>
+  <button data-nav="today" class="on" onclick="go('today')">
+    <svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="5"/></svg>Séance</button>
+  <button data-nav="cycle" onclick="go('cycle')">
+    <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v5h-5"/></svg>Cycle</button>
+  <button data-nav="next" onclick="go('next')">
+    <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Suivant</button>
+  <button data-nav="prs" onclick="go('prs')">
+    <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>Records</button>
+  <button data-nav="history" onclick="go('history')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Journal</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= STORAGE ================= */
+const store={
+  async get(k){try{if(window.storage){const r=await window.storage.get(k);return r?JSON.parse(r.value):null;}}catch(e){}
+    try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}},
+  async set(k,v){const s=JSON.stringify(v);try{if(window.storage){await window.storage.set(k,s);}}catch(e){}
+    try{localStorage.setItem(k,s);}catch(e){}}
+};
+
+/* ================= MODÈLE ================= */
+/* Programme unique : 4 jours, 8 semaines, auto-régulé au RPE.
+   Structure Upper/Lower (haut/bas) x2 — le format le plus étayé pour 4j/sem intermédiaire.
+   Chaque gros lift porte un RPE cible. On stocke une "charge de travail" par lift,
+   qui évolue selon le ressenti saisi à la séance précédente. */
+
+const RPE_TARGET_BY_WEEK = [7,7.5,8,8.5,7.5,8,8.5,6]; // sem1..8 ; sem8 = deload
+const DELOAD_WEEK = 8;
+
+// exercices principaux (auto-régulés) : clé = lift des records
+// topPct = point de départ de la charge de travail au 1er passage (calé sur % du 1RM au RPE cible sem1)
+const MAIN = {
+  squat:    {label:"Squat",              startPct:0.72},
+  bench:    {label:"Développé couché",   startPct:0.72},
+  deadlift: {label:"Soulevé de terre",   startPct:0.72},
+  ohp:      {label:"Développé militaire",startPct:0.68, from:"bench", fromRatio:0.62}
+};
+
+// 4 séances. Chaque séance = liste d'exos.
+// main:true => série de travail auto-régulée (utilise la charge courante du lift + RPE cible)
+// mainSets/mainReps par séance ; accessoires en reps fixes.
+/* Chaque exo accessoire = un "slot" avec plusieurs variantes équivalentes (même fonction).
+   La variante utilisée dépend du numéro de cycle (rotation) → change à chaque nouveau cycle,
+   sans toucher aux gros mouvements. Bouton "non faisable" = passer à la variante suivante.
+   alt:[...] liste les variantes ; needs = matériel requis (pour info). */
+const DAYS = [
+  {name:"Bas A (Squat)", ex:[
+    {lift:"squat", main:true, name:"Squat", sets:4, reps:"5", targetReps:5, rest:180, cue:"Note reps + RPE à chaque série : la charge de la série suivante s'adapte."},
+    {slot:"hinge", sets:3, reps:"8", rest:120, alt:["Soulevé de terre roumain","Good morning","Hip thrust barre","Soulevé roumain haltères","Deadlift jambes tendues","Hyperextension lestée","Kettlebell swing lourd","Pont fessier lesté","Soulevé roumain au Smith","Rack pull","Glute-ham raise","Hip thrust machine"]},
+    {slot:"quad", sets:3, reps:"10-12", rest:90, alt:["Presse à cuisses","Hack squat","Squat gobelet","Fentes marchées","Squat avant","Belt squat","Leg press unilatéral","Squat au Smith","Step-up lesté","Front squat haltères","Squat bulgare","Leg extension"]},
+    {slot:"adduct", sets:3, reps:"12-15", rest:75, alt:["Adducteurs machine","Squat sumo","Adducteurs à la poulie","Copenhagen plank","Fentes latérales","Cossack squat","Adduction avec bande","Squat sumo haltère","Fentes latérales lestées","Good morning jambes larges","Ballon adduction"]},
+    {slot:"ham", sets:3, reps:"12", rest:75, alt:["Leg curl allongé","Leg curl assis","Nordic curl","Soulevé jambes tendues haltères","Glute-ham raise","Leg curl unilatéral","Swiss ball leg curl","Soulevé roumain barre","Leg curl élastique","Good morning léger","Kettlebell swing"]},
+    {superset:true, slot:"abs", sets:3, reps:"12 + 12", rest:60, alt:[
+      "Relevé de jambes suspendu + extensions lombaires",
+      "Crunch à la poulie + superman",
+      "Roue abdominale + good morning léger",
+      "V-ups + hip extensions",
+      "Relevé de genoux + bird dog",
+      "Crunch décliné + hyperextension",
+      "Dragon flag + superman",
+      "Crunch machine + planche",
+      "Toes-to-bar + back extension"]},
+  ]},
+  {name:"Haut A (Couché)", ex:[
+    {lift:"bench", main:true, name:"Développé couché", sets:4, reps:"5", targetReps:5, rest:180, cue:"Reps + RPE à chaque série."},
+    {lift:"ohp", main:true, name:"Développé militaire", sets:3, reps:"6", targetReps:6, rest:150, cue:"Reps + RPE à chaque série."},
+    {slot:"vpull", sets:4, reps:"6-8", rest:120, alt:["Tractions lestées","Tirage vertical prise large","Tractions supination","Tirage vertical prise neutre","Tractions prise serrée","Tirage vertical unilatéral","Pull-up assisté lesté","Tirage vertical machine","Pull-up prise large","Tirage vertical corde","Muscle-up assisté"]},
+    {slot:"hpull", sets:3, reps:"10-12", rest:90, alt:["Tirage horizontal poulie","Rowing haltère","Rowing T-bar","Tirage poitrine machine","Rowing Yates","Rowing bas poulie unilatéral","Face pull","Chest-supported row","Rowing barre","Inverted row","Rowing élastique","Seal row"]},
+    {slot:"arms", sets:3, reps:"12", rest:75, alt:["Triceps + biceps (superset)","Barre au front + curl barre","Extensions poulie + curl marteau","Dips + curl incliné","Triceps overhead + curl poulie","Kickback + curl concentré","Extensions haltère + curl pupitre","Triceps machine + curl machine","Extensions corde + curl haltères","Dips lestés + curl araignée"]},
+    {superset:true, slot:"abs", sets:3, reps:"12 + 30s", rest:60, alt:[
+      "Crunch à la poulie + Pallof press",
+      "Relevé de jambes + gainage",
+      "Roue abdominale + planche latérale",
+      "Russian twists + hollow hold",
+      "Crunch câble + gainage latéral dynamique",
+      "Woodchopper poulie + dead bug",
+      "V-ups + planche",
+      "Crunch machine + Pallof press",
+      "Hanging knee raise + hollow hold"]},
+  ]},
+  {name:"Bas B (Terre)", ex:[
+    {lift:"deadlift", main:true, name:"Soulevé de terre", sets:4, reps:"4", targetReps:4, rest:210, cue:"Reps + RPE à chaque série."},
+    {slot:"squatvar", sets:3, reps:"8", rest:120, alt:["Squat avant","Squat gobelet","Squat bulgare","Hack squat","Squat pause","Box squat","Zercher squat","Squat au Smith","Front squat haltères","Presse à cuisses","Squat tempo","Belt squat"]},
+    {slot:"unilat", sets:3, reps:"10 / jambe", rest:90, alt:["Fentes marchées","Fentes arrière","Step-up sur banc","Split squat bulgare","Fentes latérales","Pistol squat assisté","Fentes sautées","Fentes avant lestées","Step-up latéral","Lunge au Smith","Curtsy lunge","Fentes bulgares déficit"]},
+    {slot:"adductB", sets:3, reps:"12-15", rest:75, alt:["Abducteurs machine","Adducteurs machine","Hip thrust bande","Copenhagen plank","Fire hydrant lesté","Abduction poulie","Monster walk bande","Clamshell lesté","Abduction couché bande","Squat sumo","Side plank abduction"]},
+    {slot:"quadiso", sets:3, reps:"12-15", rest:75, alt:["Leg extension","Presse à cuisses pieds bas","Sissy squat","Squat mur haltère","Leg extension unilatéral","Step-up lent","Spanish squat","Hack squat pieds bas","Wall sit lesté","Terminal knee extension","Cyclist squat"]},
+    {superset:true, slot:"abs", sets:3, reps:"12 + 12", rest:60, alt:[
+      "Relevé de jambes suspendu + extensions lombaires",
+      "Crunch à la poulie + superman",
+      "V-ups + hip extensions",
+      "Roue abdominale + good morning léger",
+      "Relevé de genoux + bird dog",
+      "Dragon flag + hyperextension",
+      "Crunch décliné + superman",
+      "Crunch machine + back extension",
+      "Toes-to-bar + reverse hyper"]},
+  ]},
+  {name:"Haut B (Volume)", ex:[
+    {lift:"bench", main:true, name:"Couché (technique)", sets:5, reps:"3", targetReps:3, rest:150, cue:"Plus léger : vitesse et technique. Reps + RPE à chaque série.", loadFactor:0.9},
+    {slot:"incline", sets:4, reps:"8-10", rest:90, alt:["Développé incliné haltères","Développé incliné barre","Développé décliné","Développé haltères à plat","Développé prise serrée","Couché guidé (Smith)","Écarté incliné","Pec deck","Écarté poulie","Développé incliné machine","Pompes lestées","Développé décliné haltères"]},
+    {slot:"row", sets:4, reps:"8", rest:120, alt:["Rowing barre","Rowing Yates","Rowing T-bar","Rowing poulie basse","Rowing haltère unilatéral","Rowing menton","Chest-supported row","Rowing au Smith","Seal row","Inverted row","Rowing Pendlay","Rowing élastique"]},
+    {slot:"lat", sets:3, reps:"12", rest:75, alt:["Tirage vertical prise serrée","Pull-over poulie","Tirage bras tendus","Face pull","Tirage vertical prise large","Pull-over haltère","Straight-arm pulldown","Tractions prise serrée","Tirage vertical corde","Pull-over machine"]},
+    {slot:"delt", sets:4, reps:"15", rest:45, alt:["Élévations latérales","Élévations latérales poulie","Oiseau (rear delt)","Développé Arnold léger","Élévations frontales","Reverse pec deck","Y-raise incliné","Élévations latérales machine","Oiseau poulie","Face pull","Élévations latérales élastique","Upright row corde"]},
+    {superset:true, slot:"abs", sets:3, reps:"30s + 30s", rest:60, alt:[
+      "Gainage + planche latérale",
+      "Pallof press + hollow hold",
+      "Roue abdominale + planche latérale",
+      "Relevé de jambes + gainage",
+      "Dead bug + superman",
+      "Woodchopper + gainage",
+      "Mountain climbers + hollow hold",
+      "Crunch machine + planche",
+      "Ab wheel + Pallof press"]},
+  ]},
+];
+
+/* ===== Banque d'exercices pour le remplacement "pas cette séance" =====
+   Chaque slot cible un groupe musculaire. Pour ce muscle, on a une grande liste
+   d'exercices, chacun taggé par le matériel nécessaire. Quand tu déclares le matériel
+   dispo, on te propose un exo du bon muscle réalisable avec ce que tu as. */
+
+// matériel disponible dans la banque (id -> libellé affiché)
+const EQUIP = {
+  barbell:"Barre",
+  dumbbell:"Haltères",
+  machine:"Machine guidée",
+  cable:"Poulie",
+  smith:"Smith",
+  kettlebell:"Kettlebell",
+  bands:"Élastiques",
+  bench:"Banc",
+  pullup:"Barre de traction",
+  bodyweight:"Poids du corps",
+  ez:"Barre EZ",
+};
+
+// chaque slot -> muscle ciblé
+const SLOT_MUSCLE = {
+  hinge:"ischios/fessiers", ham:"ischios", quad:"quadriceps", quadiso:"quadriceps",
+  squatvar:"quadriceps", unilat:"jambes (unilatéral)", adduct:"adducteurs",
+  adductB:"adducteurs/abducteurs", vpull:"dos (vertical)", hpull:"dos (horizontal)",
+  row:"dos (horizontal)", lat:"dos (lats)", arms:"bras", incline:"pectoraux",
+  delt:"épaules", abs:"abdos/gainage"
+};
+
+// banque : muscle -> [ {name, eq:[matériel accepté]} ]  (eq = au moins un suffit si 1 seul, sinon "et")
+// Convention : eq liste le matériel dont AU MOINS UN est requis (choix), sauf 'bench' souvent combiné.
+const EX_BANK = {
+  "quadriceps":[
+    {name:"Presse à cuisses", eq:["machine"]},
+    {name:"Hack squat", eq:["machine"]},
+    {name:"Leg extension", eq:["machine"]},
+    {name:"Squat gobelet", eq:["dumbbell","kettlebell"]},
+    {name:"Squat avant", eq:["barbell"]},
+    {name:"Front squat haltères", eq:["dumbbell"]},
+    {name:"Fentes marchées", eq:["dumbbell","barbell","bodyweight"]},
+    {name:"Split squat bulgare", eq:["dumbbell","bodyweight","bench"]},
+    {name:"Squat au Smith", eq:["smith"]},
+    {name:"Step-up lesté", eq:["dumbbell","bench","bodyweight"]},
+    {name:"Sissy squat", eq:["bodyweight"]},
+    {name:"Wall sit lesté", eq:["bodyweight","dumbbell"]},
+    {name:"Goblet squat kettlebell", eq:["kettlebell"]},
+  ],
+  "ischios":[
+    {name:"Leg curl allongé", eq:["machine"]},
+    {name:"Leg curl assis", eq:["machine"]},
+    {name:"Soulevé roumain barre", eq:["barbell"]},
+    {name:"Soulevé roumain haltères", eq:["dumbbell"]},
+    {name:"Nordic curl", eq:["bodyweight"]},
+    {name:"Swiss ball leg curl", eq:["bodyweight"]},
+    {name:"Good morning", eq:["barbell"]},
+    {name:"Soulevé roumain au Smith", eq:["smith"]},
+    {name:"Leg curl élastique", eq:["bands"]},
+    {name:"Kettlebell swing", eq:["kettlebell"]},
+  ],
+  "ischios/fessiers":[
+    {name:"Soulevé de terre roumain", eq:["barbell","dumbbell"]},
+    {name:"Hip thrust barre", eq:["barbell","bench"]},
+    {name:"Hip thrust machine", eq:["machine"]},
+    {name:"Good morning", eq:["barbell"]},
+    {name:"Kettlebell swing lourd", eq:["kettlebell"]},
+    {name:"Hyperextension lestée", eq:["bodyweight","dumbbell"]},
+    {name:"Pont fessier lesté", eq:["dumbbell","bodyweight"]},
+    {name:"Soulevé roumain élastique", eq:["bands"]},
+    {name:"Glute-ham raise", eq:["machine","bodyweight"]},
+  ],
+  "adducteurs":[
+    {name:"Adducteurs machine", eq:["machine"]},
+    {name:"Adducteurs à la poulie", eq:["cable"]},
+    {name:"Squat sumo", eq:["barbell","dumbbell","kettlebell"]},
+    {name:"Fentes latérales", eq:["dumbbell","bodyweight"]},
+    {name:"Cossack squat", eq:["bodyweight","dumbbell","kettlebell"]},
+    {name:"Adduction élastique", eq:["bands"]},
+    {name:"Copenhagen plank", eq:["bench","bodyweight"]},
+    {name:"Squat sumo haltère", eq:["dumbbell"]},
+    {name:"Good morning jambes larges", eq:["barbell"]},
+    {name:"Ballon adduction", eq:["bodyweight"]},
+    {name:"Fentes latérales lestées", eq:["dumbbell","kettlebell"]},
+  ],
+  "adducteurs/abducteurs":[
+    {name:"Abducteurs machine", eq:["machine"]},
+    {name:"Adducteurs machine", eq:["machine"]},
+    {name:"Abduction poulie", eq:["cable"]},
+    {name:"Monster walk élastique", eq:["bands"]},
+    {name:"Fire hydrant lesté", eq:["bodyweight","bands"]},
+    {name:"Hip thrust bande", eq:["bands","bench"]},
+    {name:"Copenhagen plank", eq:["bench","bodyweight"]},
+    {name:"Clamshell élastique", eq:["bands","bodyweight"]},
+    {name:"Side plank abduction", eq:["bodyweight"]},
+    {name:"Abduction couché", eq:["bodyweight","bands"]},
+  ],
+  "jambes (unilatéral)":[
+    {name:"Fentes marchées", eq:["dumbbell","barbell","bodyweight"]},
+    {name:"Fentes arrière", eq:["dumbbell","bodyweight"]},
+    {name:"Split squat bulgare", eq:["dumbbell","bodyweight","bench"]},
+    {name:"Step-up sur banc", eq:["dumbbell","bench","bodyweight"]},
+    {name:"Pistol squat assisté", eq:["bodyweight"]},
+    {name:"Fentes sautées", eq:["bodyweight"]},
+    {name:"Fentes latérales", eq:["dumbbell","bodyweight"]},
+    {name:"Leg press unilatéral", eq:["machine"]},
+    {name:"Lunge au Smith", eq:["smith"]},
+    {name:"Curtsy lunge", eq:["dumbbell","bodyweight"]},
+    {name:"Step-up latéral", eq:["dumbbell","bench","bodyweight"]},
+  ],
+  "dos (vertical)":[
+    {name:"Tractions", eq:["pullup","bodyweight"]},
+    {name:"Tractions lestées", eq:["pullup"]},
+    {name:"Tirage vertical prise large", eq:["cable","machine"]},
+    {name:"Tirage vertical prise neutre", eq:["cable","machine"]},
+    {name:"Tirage vertical unilatéral", eq:["cable"]},
+    {name:"Pull-up assisté élastique", eq:["pullup","bands"]},
+    {name:"Pull-over poulie", eq:["cable"]},
+    {name:"Tirage vertical machine", eq:["machine"]},
+    {name:"Tractions supination", eq:["pullup","bodyweight"]},
+    {name:"Tirage vertical corde", eq:["cable"]},
+  ],
+  "dos (horizontal)":[
+    {name:"Rowing barre", eq:["barbell"]},
+    {name:"Rowing haltère unilatéral", eq:["dumbbell","bench"]},
+    {name:"Tirage horizontal poulie", eq:["cable"]},
+    {name:"Rowing T-bar", eq:["barbell","machine"]},
+    {name:"Chest-supported row", eq:["machine","dumbbell","bench"]},
+    {name:"Rowing au Smith", eq:["smith"]},
+    {name:"Rowing élastique", eq:["bands"]},
+    {name:"Inverted row", eq:["barbell","bodyweight"]},
+    {name:"Face pull", eq:["cable","bands"]},
+    {name:"Seal row", eq:["dumbbell","bench","barbell"]},
+    {name:"Rowing Pendlay", eq:["barbell"]},
+  ],
+  "dos (lats)":[
+    {name:"Tirage bras tendus poulie", eq:["cable"]},
+    {name:"Pull-over haltère", eq:["dumbbell","bench"]},
+    {name:"Pull-over poulie", eq:["cable"]},
+    {name:"Tirage vertical prise serrée", eq:["cable","machine"]},
+    {name:"Straight-arm pulldown élastique", eq:["bands"]},
+    {name:"Tractions prise serrée", eq:["pullup","bodyweight"]},
+    {name:"Pull-over machine", eq:["machine"]},
+    {name:"Tirage vertical corde", eq:["cable"]},
+  ],
+  "bras":[
+    {name:"Barre au front + curl barre", eq:["ez","barbell","bench"]},
+    {name:"Extensions poulie + curl poulie", eq:["cable"]},
+    {name:"Dips + curl incliné", eq:["bodyweight","dumbbell","bench"]},
+    {name:"Extensions haltère + curl haltères", eq:["dumbbell"]},
+    {name:"Kickback + curl marteau", eq:["dumbbell"]},
+    {name:"Triceps machine + curl machine", eq:["machine"]},
+    {name:"Extensions élastique + curl élastique", eq:["bands"]},
+    {name:"Dips lestés + curl araignée", eq:["bodyweight","dumbbell","bench"]},
+    {name:"Extensions corde + curl pupitre", eq:["cable","ez"]},
+  ],
+  "pectoraux":[
+    {name:"Développé incliné haltères", eq:["dumbbell","bench"]},
+    {name:"Développé incliné barre", eq:["barbell","bench"]},
+    {name:"Développé haltères à plat", eq:["dumbbell","bench"]},
+    {name:"Écarté incliné haltères", eq:["dumbbell","bench"]},
+    {name:"Couché guidé (Smith)", eq:["smith","bench"]},
+    {name:"Pec deck", eq:["machine"]},
+    {name:"Écarté poulie", eq:["cable"]},
+    {name:"Pompes lestées", eq:["bodyweight"]},
+    {name:"Développé incliné machine", eq:["machine"]},
+  ],
+  "épaules":[
+    {name:"Élévations latérales haltères", eq:["dumbbell"]},
+    {name:"Élévations latérales poulie", eq:["cable"]},
+    {name:"Élévations latérales machine", eq:["machine"]},
+    {name:"Développé Arnold", eq:["dumbbell","bench"]},
+    {name:"Reverse pec deck", eq:["machine"]},
+    {name:"Oiseau haltères", eq:["dumbbell"]},
+    {name:"Élévations frontales", eq:["dumbbell","barbell","cable"]},
+    {name:"Élévations latérales élastique", eq:["bands"]},
+    {name:"Face pull (arrière d'épaule)", eq:["cable","bands"]},
+  ],
+  "abdos/gainage":[
+    {name:"Relevé de jambes suspendu", eq:["pullup","bodyweight"]},
+    {name:"Crunch à la poulie", eq:["cable"]},
+    {name:"Roue abdominale", eq:["bodyweight"]},
+    {name:"Gainage + planche latérale", eq:["bodyweight"]},
+    {name:"Crunch machine", eq:["machine"]},
+    {name:"Pallof press", eq:["cable","bands"]},
+    {name:"Relevé de genoux", eq:["pullup","bodyweight"]},
+    {name:"Russian twists lestés", eq:["dumbbell","kettlebell","bodyweight"]},
+    {name:"Woodchopper poulie", eq:["cable"]},
+    {name:"Dead bug", eq:["bodyweight"]},
+    {name:"Hollow hold", eq:["bodyweight"]},
+    {name:"Dragon flag", eq:["bench","bodyweight"]},
+  ],
+};
+const RPE_SCALE = [
+  {v:6,   t:"6",   d:"4 RIR"},
+  {v:6.5, t:"6.5", d:""},
+  {v:7,   t:"7",   d:"3 RIR"},
+  {v:7.5, t:"7.5", d:""},
+  {v:8,   t:"8",   d:"2 RIR"},
+  {v:8.5, t:"8.5", d:""},
+  {v:9,   t:"9",   d:"1 RIR"},
+  {v:9.5, t:"9.5", d:""},
+  {v:10,  t:"10",  d:"max"},
+];
+// ~4% de charge par point de RPE ; ajusté aussi selon reps réelles vs cible
+function suggestNextLoad(curW, targetRPE, actualRPE, targetReps, actualReps){
+  if(actualRPE==null) return curW;
+  // écart RPE : positif = trop facile (RPE réel < cible) => monter
+  let rpeGap = targetRPE - actualRPE;
+  // écart reps : positif = plus de reps que prévu => monter
+  let repGap = (actualReps!=null ? actualReps - targetReps : 0);
+  // conversion : chaque point de RPE ≈ 3% ; chaque rep d'écart ≈ 3%
+  let pct = (rpeGap*0.03) + (repGap*0.03);
+  // borne raisonnable par série : ±7%
+  pct = Math.max(-0.07, Math.min(0.07, pct));
+  let next = curW*(1+pct);
+  return Math.round(next/2.5)*2.5;
+}
+
+/* ================= ÉTAT ================= */
+let PR={bench:130, deadlift:220, squat:190};      // maxs de travail actuels (pilotent les charges)
+let PRmax={bench:130, deadlift:220, squat:190};   // records absolus, jamais baissés automatiquement
+let CYCLE=null;   // {start, week, dayDone:{ "w-d":true }, loads:{squat,bench,deadlift,ohp}, lastAdj:{} }
+let SESSION=null;
+let LOG=[];
+let curWeek=1, curDay=0, view='today';
+
+/* ================= HELPERS ================= */
+const roundW=w=>Math.round(w/2.5)*2.5;
+function fmtT(s){const m=Math.floor(s/60),x=s%60;return m+":"+String(x).padStart(2,'0');}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2000);}
+
+function initCycle(prevCycleNum, carryNextOverride){
+  const loads={};
+  for(const k in MAIN){
+    const m=MAIN[k];
+    const base = m.from ? PR[m.from]*m.fromRatio : PR[k];
+    loads[k]=roundW(base*m.startPct);
+  }
+  const num = (prevCycleNum||0)+1;
+  // les choix "cycle suivant" prévisualisés deviennent les overrides actifs du nouveau cycle
+  const slotOverride = carryNextOverride ? {...carryNextOverride} : {};
+  return {start:new Date().toISOString(), num, week:1, dayDone:{}, loads, lastAdj:{}, slotOverride, nextOverride:{}, history:[]};
+}
+
+// clé unique par jour+slot (un même slot, ex "abs", existe dans plusieurs jours)
+function slotKey(di, slot){ return di+':'+slot; }
+
+// Vérifie qu'une session sauvegardée correspond encore à la structure du programme actuel.
+// (Si on a changé les exercices/séries depuis, l'ancienne session est incompatible.)
+function sessionValid(ses){
+  if(!ses || typeof ses.day!=='number' || !Array.isArray(ses.ex)) return false;
+  const day=DAYS[ses.day];
+  if(!day) return false;
+  if(ses.ex.length!==day.ex.length) return false;
+  for(let i=0;i<day.ex.length;i++){
+    const need=day.ex[i].sets;
+    if(!ses.ex[i] || !Array.isArray(ses.ex[i].sets) || ses.ex[i].sets.length!==need) return false;
+  }
+  return true;
+}
+
+/* Résout le nom d'un accessoire. mode:'cur' = cycle en cours ; mode:'next' = cycle suivant (prévisualisation).
+   di = index du jour. Renvoie {name, idx, count, list}. */
+function resolveExo(ex, di, mode){
+  if(!ex.slot) return {name:ex.name, idx:0, count:1, list:[ex.name]};
+  const list=ex.alt||[ex.name];
+  const cyc=(CYCLE&&CYCLE.num)?CYCLE.num:1;
+  const key=slotKey(di, ex.slot);
+  if(mode==='next'){
+    const base=(cyc)%list.length;  // rotation auto du prochain cycle
+    const ov=CYCLE&&CYCLE.nextOverride?CYCLE.nextOverride[key]:undefined;
+    let idx=(ov!=null)?ov:base;
+    idx=((idx%list.length)+list.length)%list.length;
+    return {name:list[idx], idx, count:list.length, list};
+  }
+  const base=(cyc-1)%list.length;
+  // nom personnalisé fixé via "tout le cycle" (choix par matériel) : prioritaire
+  const custom=CYCLE&&CYCLE.slotCustom?CYCLE.slotCustom[key]:undefined;
+  if(custom){ return {name:custom, idx:-1, count:list.length, list, custom:true}; }
+  const ov=CYCLE&&CYCLE.slotOverride?CYCLE.slotOverride[key]:undefined;
+  let idx=(ov!=null)?ov:base;
+  idx=((idx%list.length)+list.length)%list.length;
+  return {name:list[idx], idx, count:list.length, list};
+}
+// matériel réellement utile pour un muscle donné (n'affiche que ce qui sert à au moins un exo)
+function relevantEquip(slot){
+  const muscle=SLOT_MUSCLE[slot];
+  const bank=EX_BANK[muscle]||[];
+  const set=new Set();
+  bank.forEach(x=>x.eq.forEach(q=>set.add(q)));
+  // conserve l'ordre de EQUIP
+  return Object.keys(EQUIP).filter(id=>set.has(id));
+}
+function toggleEquip(id){
+  if(!CYCLE.equip) CYCLE.equip={};
+  CYCLE.equip[id]=!CYCLE.equip[id];
+  store.set('cycle',CYCLE);
+  render();
+}
+function availableEquip(){
+  const e=(CYCLE&&CYCLE.equip)||{};
+  return Object.keys(EQUIP).filter(k=>e[k]);
+}
+
+// Ouvre le sélecteur de matériel. mode:'session' (juste aujourd'hui) ou 'cycle' (toute la suite).
+let equipPicker=null; // {slot, mode}
+function openEquipPicker(slot, mode){
+  if(equipPicker && equipPicker.slot===slot && equipPicker.mode===mode){ equipPicker=null; }
+  else { equipPicker={slot, mode}; }
+  render();
+}
+// "non faisable ce cycle" : on garde une version rotation simple en secours (non utilisée par l'UI)
+function swapExo(di, slot){
+  if(!CYCLE)return;
+  const ex=DAYS[di].ex.find(e=>e.slot===slot);
+  if(!ex)return;
+  const cur=resolveExo(ex, di, 'cur');
+  const next=(cur.idx+1)%cur.count;
+  CYCLE.slotOverride[slotKey(di,slot)]=next;
+  if(SESSION && SESSION.day===di){
+    const se=SESSION.ex.find(e=>e.slot===slot);
+    if(se){ se.name=cur.list[next]; se.sessOverride=next; }
+    store.set('session',SESSION);
+  }
+  store.set('cycle',CYCLE);
+  toast("Changé pour tout le cycle : "+cur.list[next]);
+  render();
+}
+
+// Ouvre une vidéo de démonstration de l'exercice (recherche YouTube pré-remplie).
+function watchExo(name){
+  // pour un superset "A + B", on cherche le premier mouvement
+  let q=String(name).split('+')[0].trim();
+  q=q+" technique musculation";
+  const url="https://www.youtube.com/results?search_query="+encodeURIComponent(q);
+  try{ window.open(url,'_blank'); }catch(e){ location.href=url; }
+}
+
+function resetCustom(di, slot){
+  if(!CYCLE||!CYCLE.slotCustom)return;
+  delete CYCLE.slotCustom[slotKey(di,slot)];
+  if(SESSION && SESSION.day===di){
+    const se=SESSION.ex.find(e=>e.slot===slot);
+    if(se){ const ex=DAYS[di].ex.find(e=>e.slot===slot); se.name=resolveExo(ex,di,'cur').name; se.sessOverride=undefined; }
+    store.set('session',SESSION);
+  }
+  store.set('cycle',CYCLE);
+  equipPicker=null;
+  toast("Exercice d'origine rétabli");
+  render();
+}
+// choisit un exo du bon muscle réalisable avec le matériel coché, selon le mode
+function chooseByEquip(di, slot, mode){
+  const ex=DAYS[di].ex.find(e=>e.slot===slot);
+  if(!ex)return;
+  const muscle=SLOT_MUSCLE[slot];
+  const bank=EX_BANK[muscle]||[];
+  const avail=availableEquip();
+  if(!avail.length){ toast("Coche au moins un matériel"); return; }
+  const doable=bank.filter(x=> x.eq.some(q=>avail.includes(q)) );
+  if(!doable.length){ toast("Aucun exo pour ce muscle avec ce matériel"); return; }
+
+  if(mode==='cycle'){
+    // remplace pour toute la suite du cycle : on stocke le nom choisi comme override "custom"
+    const curName = resolveExo(ex, di, 'cur').name;
+    const pool=doable.filter(x=>x.name!==curName);
+    const pick=(pool.length?pool:doable)[Math.floor(Math.random()*(pool.length?pool.length:doable.length))];
+    if(!CYCLE.slotCustom) CYCLE.slotCustom={};
+    CYCLE.slotCustom[slotKey(di,slot)]=pick.name;   // nom fixe pour le reste du cycle
+    delete (CYCLE.slotOverride||{})[slotKey(di,slot)]; // l'override d'index ne s'applique plus
+    if(SESSION && SESSION.day===di){
+      const se=SESSION.ex.find(e=>e.slot===slot);
+      if(se){ se.name=pick.name; se.sessOverride='equip:'+pick.name; }
+      store.set('session',SESSION);
+    }
+    store.set('cycle',CYCLE);
+    equipPicker=null;
+    toast("Pour tout le cycle : "+pick.name);
+    render();
+    return;
+  }
+
+  // mode séance : ne touche qu'à la séance en cours
+  if(!SESSION || SESSION.day!==di){ toast("Démarre la séance d'abord"); return; }
+  const se=SESSION.ex.find(e=>e.slot===slot);
+  if(!se)return;
+  const curName=se.name;
+  const pool=doable.filter(x=>x.name!==curName);
+  const pick=(pool.length?pool:doable)[Math.floor(Math.random()*(pool.length?pool.length:doable.length))];
+  se.name=pick.name;
+  se.sessOverride='equip:'+pick.name;
+  store.set('session',SESSION);
+  equipPicker=null;
+  toast("Pour cette séance : "+pick.name);
+  render();
+}
+// choisir une variante pour le CYCLE SUIVANT (prévisualisation)
+function setNextExo(di, slot, idx){
+  if(!CYCLE)return;
+  CYCLE.nextOverride[slotKey(di,slot)]=idx;
+  store.set('cycle',CYCLE);
+  render();
+}
+
+// charge affichée pour un exo principal à une semaine donnée
+/* Progression sur le bloc de 8 semaines (périodisation linéaire de force).
+   Les reps baissent par palier pendant que l'intensité monte, pour se rapprocher du 1RM.
+   reps = décalage appliqué aux reps de base du mouvement (sem1) ; mult = charge relative à la
+   charge de travail de base. Semaine 8 = deload (léger, reps de reprise). */
+const WEEK_PROG = [
+  {repsDelta: 0,  mult:1.00},  // S1 : reps de base, charge de base
+  {repsDelta: 0,  mult:1.03},  // S2 : mêmes reps, un peu plus lourd
+  {repsDelta:-1,  mult:1.06},  // S3 : -1 rep
+  {repsDelta:-1,  mult:1.09},  // S4
+  {repsDelta:-2,  mult:1.13},  // S5 : -2 reps
+  {repsDelta:-2,  mult:1.16},  // S6
+  {repsDelta:-3,  mult:1.20},  // S7 : -3 reps, le plus lourd (proche du PR)
+  {repsDelta: 0,  mult:0.80},  // S8 : deload
+];
+function weekReps(baseReps, week){
+  const p = WEEK_PROG[week-1] || WEEK_PROG[0];
+  return Math.max(1, (baseReps||5) + p.repsDelta);
+}
+function mainLoad(lift, week, loadFactor){
+  let w = CYCLE.loads[lift];
+  const p = WEEK_PROG[week-1] || WEEK_PROG[0];
+  return roundW(w * p.mult * (loadFactor||1));
+}
+function rpeTarget(week){ return RPE_TARGET_BY_WEEK[week-1]; }
+
+/* Génère les séries d'échauffement pour un gros mouvement, d'après la charge de travail.
+   Démarre à une charge FIXE par mouvement, monte vers la charge de travail. Les reps
+   d'échauffement sont calées sur les reps de travail (workReps) : elles partent un peu au-dessus
+   puis descendent, sans jamais fatiguer. Ne compte pas dans le volume. */
+const WARM_START = { bench:60, squat:70, deadlift:70, ohp:30 }; // 1re série de chauffe (kg)
+function warmupSets(workW, lift, workReps){
+  const bar=20;
+  if(!workW || workW<=bar+10) return [];
+  const wr = Math.max(1, parseInt(workReps)||5);
+  // reps d'échauffement dégressives, référencées sur les reps de travail
+  // barre : wr+3 ; 1er palier : wr ; palier ~60% : ceil(wr/2) ; palier ~80% : 1-2
+  const rBar = wr+3;
+  const r1   = wr;
+  const rMid = Math.max(2, Math.ceil(wr/2));
+  const rTop = wr<=3 ? 1 : 2;
+  const out=[];
+  if(lift!=='deadlift') out.push({w:bar, r:rBar, bar:true});
+  const start = WARM_START[lift];
+  if(start && start>bar && start < workW*0.9){ out.push({w:roundW(start), r:r1}); }
+  const mids = lift==='deadlift' ? [0.65,0.8] : [0.6,0.8];
+  const midReps = [rMid, rTop];
+  mids.forEach((p,i)=>{
+    const w=roundW(workW*p);
+    if(w>bar && w>out[out.length-1].w && w < workW*0.92){ out.push({w, r:midReps[i]}); }
+  });
+  return out;
+}
+
+function marginText(week){
+  const t=rpeTarget(week);
+  const reserve = Math.round((10-t));
+  if(week===DELOAD_WEEK) return "Deload — RPE cible 6 (reste très facile, ~4 reps en réserve)";
+  return `RPE cible cette semaine : ${t} (~${reserve} rep${reserve>1?'s':''} en réserve)`;
+}
+
+/* ================= TEST PR (fin de bloc) ================= */
+// 1RM estimé à partir de la performance RÉELLE de fin de bloc (idéalement semaine 7, le pic).
+// On utilise la meilleure série capturée : charge, reps et RPE réels.
+// Méthode : reps-jusqu'à-l'échec = reps + (10 - RPE) ; 1RM = charge × (1 + repsÉchec/30) (Epley).
+const LIFT_BASEREPS = { squat:5, bench:5, deadlift:4 };
+function e1RM(weight, reps, rpe){
+  const rir = (rpe!=null && !isNaN(rpe)) ? Math.max(0,(10-rpe)) : 0;
+  const repsToFailure = (reps||1) + rir;
+  return Math.round(weight*(1+repsToFailure/30));
+}
+// enregistre la meilleure série de travail d'un gros mouvement pour la semaine donnée
+function captureLiftResult(e, week){
+  if(!e || !e.lift || !e.main) return;
+  if(!CYCLE.results) CYCLE.results={};
+  // meilleure série = celle qui donne le 1RM estimé le plus élevé
+  let best=null;
+  e.sets.forEach(s=>{
+    const w=parseFloat(s.w), r=parseFloat(s.r), rpe=parseFloat(s.rpe);
+    if(!w||!r) return;
+    const est=e1RM(w,r,isNaN(rpe)?null:rpe);
+    if(!best || est>best.est) best={w,r,rpe:isNaN(rpe)?null:rpe,est};
+  });
+  if(best){
+    if(!CYCLE.results[e.lift]) CYCLE.results[e.lift]={};
+    CYCLE.results[e.lift][week]=best;
+  }
+}
+function estimatedMaxFromCycle(lift){
+  if(!CYCLE) return PR[lift];
+  const res = CYCLE.results && CYCLE.results[lift];
+  // priorité à la perf réelle : semaine 7, sinon 6, sinon 5, sinon la plus récente dispo
+  if(res){
+    for(const wk of [7,6,5,4,3,2,1]){
+      if(res[wk]) return res[wk].est;
+    }
+  }
+  // fallback : estimation planifiée (avant d'avoir fait la semaine 7)
+  const peak = mainLoad(lift, 7);
+  const reps = weekReps(LIFT_BASEREPS[lift]||5, 7);
+  return Math.round(peak*(1+reps/30));
+}
+// suggère les paliers vers un 1RM cible pour la séance de test
+function prAttempts(target, lift){
+  const bar=20;
+  const steps=[0.4,0.6,0.75,0.85,0.93,1.0];
+  const reps =[5,3,2,1,1,1];
+  const out=[];
+  if(lift!=='deadlift') out.push({w:bar, r:6, bar:true, warm:true});
+  steps.forEach((p,i)=>{
+    const w=roundW(target*p);
+    if(w>bar && (out.length===0 || w>out[out.length-1].w)){
+      out.push({w, r:reps[i], warm:p<0.9, attempt:p>=0.9});
+    }
+  });
+  return out;
+}
+
+/* En fin de séance : on met à jour la charge stockée du lift à partir de la
+   dernière série principale saisie (reps + RPE réels), pour la prochaine séance. */
+function updateLiftFromSession(e, week){
+  // capture de la meilleure série de travail (pour l'estimation du test PR en fin de bloc)
+  captureLiftResult(e, week);
+  if(week===DELOAD_WEEK) return; // pas de mise à jour de charge en deload
+  const target=rpeTarget(week);
+  // trouve la dernière série avec un RPE saisi (et sa charge réelle)
+  let last=null, lastReps=null, lastW=null;
+  e.sets.forEach(s=>{ if(s.rpe!=null && s.rpe!==''){ last=parseFloat(s.rpe); lastReps=parseFloat(s.r)||null; lastW=parseFloat(s.w)||null; } });
+  if(last==null) return;
+  const baseReps = e.targetReps||5;
+  const tReps = weekReps(baseReps, week);              // reps cibles de cette semaine
+  const p = WEEK_PROG[week-1] || WEEK_PROG[0];
+  // charge réellement utilisée cette semaine (sinon reconstituée depuis la base)
+  const actual = lastW || (CYCLE.loads[e.lift]*p.mult);
+  // ajuste la charge réelle selon RPE/reps, puis reconvertit en charge de BASE (semaine 1)
+  const nextActual = suggestNextLoad(actual, target, last, tReps, lastReps);
+  const nextBase = roundW(nextActual / (p.mult||1));
+  const before = CYCLE.loads[e.lift];
+  CYCLE.loads[e.lift]=nextBase;
+  CYCLE.lastAdj[e.lift]={delta: nextBase-before, week};
+}
+
+/* ================= REST ================= */
+let restInt=null,restLeft=0;
+function restStart(sec){restLeft=sec;const el=document.getElementById('rest');el.classList.add('show');
+  document.getElementById('restT').textContent=fmtT(restLeft);clearInterval(restInt);
+  restInt=setInterval(()=>{restLeft--;document.getElementById('restT').textContent=fmtT(Math.max(0,restLeft));
+    if(restLeft<=0){restStop();if(navigator.vibrate)navigator.vibrate([200,80,200]);toast("Repos terminé");}},1000);}
+function restAdd(s){restLeft+=s;document.getElementById('restT').textContent=fmtT(restLeft);}
+function restStop(){clearInterval(restInt);document.getElementById('rest').classList.remove('show');}
+
+/* ================= NAV ================= */
+function go(v){view=v;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.nav===v));render();window.scrollTo(0,0);}
+
+/* ================= RENDER ================= */
+function render(){
+  const m=document.getElementById('main');
+  try{
+    document.getElementById('cycInfo').textContent = CYCLE ? `Cycle ${CYCLE.num} · Semaine ${curWeek} / 8` : "Non démarré";
+    if(!CYCLE){ renderStart(m); return; }
+    if(view==='today') renderToday(m);
+    else if(view==='cycle') renderCycle(m);
+    else if(view==='next') renderNext(m);
+    else if(view==='prs') renderPRs(m);
+    else if(view==='prtest') renderPRTest(m);
+    else if(view==='history') renderHistory(m);
+  }catch(e){
+    m.innerHTML=`<div class="card"><h2>Un souci d'affichage</h2>
+      <p class="muted">Une donnée sauvegardée n'était pas compatible. Tu peux réparer sans perdre ton historique.</p>
+      <button class="btn" style="margin-top:8px" onclick="repairState()">Réparer</button></div>`;
+    console.error(e);
+  }
+}
+// abandonne une session/état corrompu sans toucher aux records ni à l'historique
+function repairState(){
+  SESSION=null; store.set('session',null);
+  if(CYCLE){ if(!CYCLE.nextOverride)CYCLE.nextOverride={}; if(!CYCLE.slotOverride)CYCLE.slotOverride={}; store.set('cycle',CYCLE); }
+  view='today'; toast("Réparé"); render();
+}
+
+function renderStart(m){
+  m.innerHTML=`<div class="card"><h2>Ton cycle de 8 semaines</h2>
+    <p class="muted">Un seul programme, 4 séances/semaine (haut/bas), auto-régulé à ton ressenti. Les charges montent semaine après semaine et s'ajustent selon comment tu sens tes séries. La semaine 8 est un deload, puis tu retestes tes max.</p>
+    <div class="note">Avant de démarrer, vérifie tes records dans l'onglet <b>Records</b> — ils servent de point de départ pour les charges.</div>
+    <button class="btn" onclick="startCycle()" style="margin-top:6px">Démarrer le cycle</button>
+  </div>`;
+}
+function startCycle(){ CYCLE=initCycle(0); curWeek=1; curDay=0; store.set('cycle',CYCLE); toast("Cycle 1 démarré 💪"); render(); }
+
+function renderToday(m){
+  // bandeau semaines
+  let wk=`<div class="weeks">`;
+  for(let w=1;w<=8;w++){
+    const dl=w===DELOAD_WEEK;
+    const doneCount=[0,1,2,3].filter(d=>CYCLE.dayDone[w+'-'+d]).length;
+    const allDone=doneCount===4;
+    wk+=`<div class="wk ${w===curWeek?'on':''} ${dl?'deload':''} ${allDone?'done':''}" onclick="pickWeek(${w})">
+      <div class="n">${w}</div><div class="p">${dl?'deload':weekReps(5,w)+' reps'}</div></div>`;
+  }
+  wk+=`</div>`;
+
+  // jours
+  let dstrip=`<div class="days">`+DAYS.map((d,i)=>{
+    const done=CYCLE.dayDone[curWeek+'-'+i];
+    return `<button class="daybtn ${i===curDay?'on':''} ${done?'ok':''}" onclick="pickDay(${i})">${done?'✓ ':''}${d.name}</button>`;
+  }).join('')+`</div>`;
+
+  const day=DAYS[curDay];
+  const active = SESSION && SESSION.week===curWeek && SESSION.day===curDay && sessionValid(SESSION);
+  const alreadyDone = CYCLE.dayDone[curWeek+'-'+curDay] && !active;
+
+  // détecte les séances non faites dans les semaines déjà entamées avant la semaine courante
+  let missedBanner='';
+  const missed=[];
+  for(let w=1;w<curWeek;w++){
+    const doneAny=[0,1,2,3].some(d=>CYCLE.dayDone[w+'-'+d]);
+    if(!doneAny) continue; // semaine jamais commencée = ignorée (pas "manquée")
+    [0,1,2,3].forEach(d=>{ if(!CYCLE.dayDone[w+'-'+d]) missed.push({w,d}); });
+  }
+  if(missed.length && !CYCLE.missedDismissed){
+    const list=missed.slice(0,4).map(x=>`S${x.w} · ${DAYS[x.d].name}`).join(', ');
+    missedBanner=`<div class="miss">
+      <div class="misshead">Séances non réalisées</div>
+      <div class="misstxt">${missed.length} séance${missed.length>1?'s':''} sautée${missed.length>1?'s':''} : ${list}${missed.length>4?'…':''}</div>
+      <div class="missrow">
+        <button class="btn sm ghost" onclick="dismissMissed()">Ignorer (avancer)</button>
+        <button class="btn sm" onclick="rescheduleMissed()">Rattraper cette semaine</button>
+      </div>
+      <div class="tiny" style="margin-top:6px">« Rattraper » place la séance sautée la plus prioritaire (gros mouvement) sur un jour libre de la semaine en cours. « Ignorer » continue sans rattrapage — la progression reste fondée sur ce que tu as réellement fait.</div>
+    </div>`;
+  }
+
+  let body=missedBanner+`<div class="note ${curWeek===DELOAD_WEEK?'blue':''}">${marginText(curWeek)}</div>`;
+
+  body+=day.ex.map((ex,ei)=>{
+    const isMain=ex.main;
+    const baseLoad=isMain?mainLoad(ex.lift,curWeek,ex.loadFactor):null;
+    const tgtRPE=rpeTarget(curWeek);
+    let sets='';
+    let headMain = isMain
+      ? `<div class="rowhead"><span></span><span>Charge</span><span>Reps${ex.targetReps?` /${weekReps(ex.targetReps,curWeek)}`:''}</span><span>RPE /${tgtRPE}</span><span></span></div>`
+      : ``;
+    const wkTargetReps = ex.targetReps ? weekReps(ex.targetReps, curWeek) : null;
+    // séries d'échauffement (gros mouvements uniquement), calculées sur la charge de travail
+    let warm='';
+    if(isMain){
+      const wu=warmupSets(baseLoad, ex.lift, wkTargetReps);
+      if(wu.length){
+        warm=`<div class="wuhead">Échauffement <span class="tiny">(non compté)</span></div>`+
+          wu.map((w,wi)=>`<div class="setrow wu">
+            <div class="si">·</div>
+            <div class="wuw">${w.bar?'Barre':w.w+' kg'}</div>
+            <div class="wur">${w.r} reps</div>
+            <div></div><div></div>
+          </div>`).join('')+
+          `<div class="wusep">Séries de travail — ${wkTargetReps} reps · RPE ${tgtRPE}</div>`;
+      }
+    }
+    for(let s=0;s<ex.sets;s++){
+      const sd=active?SESSION.ex[ei].sets[s]:null;
+      // charge suggérée : série 1 = baseLoad ; suivantes = adaptée d'après série précédente si RPE saisi
+      let sugg=baseLoad;
+      if(active && isMain && s>0){
+        const prev=SESSION.ex[ei].sets[s-1];
+        if(prev.rpe!=null && prev.rpe!=='' ){
+          const prevW=parseFloat(prev.w)||baseLoad;
+          sugg=suggestNextLoad(prevW, tgtRPE, parseFloat(prev.rpe), wkTargetReps||5, parseFloat(prev.r)||null);
+        }else{ sugg=parseFloat(prev.w)||baseLoad; }
+      }
+      // si l'utilisateur n'a PAS édité la charge de cette série à la main, on affiche la suggestion
+      let wVal;
+      if(isMain && active && s>0 && sd && !sd.wEdited){
+        wVal = sugg!==null?sugg:'';
+        if(sd.w!==String(wVal)){ sd.w=String(wVal); } // garde le stock synchro avec la suggestion
+      }else{
+        wVal = sd&&sd.w!==''?sd.w:(sugg!==null?sugg:'');
+      }
+      // reps pré-remplies avec la cible de la semaine (modifiable ensuite)
+      let rVal;
+      if(isMain && active && sd && !sd.rEdited && wkTargetReps){
+        rVal = String(wkTargetReps);
+        if(sd.r!==rVal){ sd.r=rVal; } // synchro du stock avec la valeur par défaut
+      }else{
+        rVal = sd&&sd.r!==''?sd.r:'';
+      }
+      const rpeVal = sd&&sd.rpe!=null&&sd.rpe!==''?sd.rpe:'';
+      const done=sd&&sd.done;
+      // indice d'adaptation sur cette série (par rapport à la précédente)
+      let flag='';
+      if(active && isMain && s>0){
+        const prev=SESSION.ex[ei].sets[s-1];
+        if(prev.rpe!=null && prev.rpe!==''){
+          const prevW=parseFloat(prev.w)||baseLoad;
+          const d=(parseFloat(wVal)||sugg)-prevW;
+          if(d>0) flag=`<span class="adj up">+${d}</span>`;
+          else if(d<0) flag=`<span class="adj down">${d}</span>`;
+        }
+      }
+      if(isMain){
+        sets+=`<div class="setrow main">
+          <div class="si">${s+1}${flag}</div>
+          <div><input inputmode="decimal" placeholder="kg" value="${wVal}" onchange="setVal(${ei},${s},'w',this.value)" ${active?'':'disabled'}></div>
+          <div><input inputmode="numeric" placeholder="reps" value="${rVal}" onchange="setVal(${ei},${s},'r',this.value)" ${active?'':'disabled'}></div>
+          <div><input inputmode="decimal" placeholder="rpe" value="${rpeVal}" onchange="setRPE(${ei},${s},this.value)" ${active?'':'disabled'} class="rpein"></div>
+          <div class="chk ${done?'done':''}" onclick="${active?`toggleSet(${ei},${s},${ex.rest||90})`:''}">${done?'✓':''}</div>
+        </div>`;
+      }else{
+        sets+=`<div class="setrow">
+          <div class="si">${s+1}</div>
+          <div><input inputmode="decimal" placeholder="kg" value="${wVal}" onchange="setVal(${ei},${s},'w',this.value)" ${active?'':'disabled'}></div>
+          <div><input inputmode="numeric" placeholder="reps" value="${rVal}" onchange="setVal(${ei},${s},'r',this.value)" ${active?'':'disabled'}></div>
+          <div class="chk ${done?'done':''}" onclick="${active?`toggleSet(${ei},${s},${ex.rest||90})`:''}">${done?'✓':''}</div>
+        </div>`;
+      }
+    }
+    // rappel de l'ajustement reporté sur la charge de départ (séance précédente)
+    let adj='';
+    if(isMain){
+      const a=CYCLE.lastAdj[ex.lift];
+      if(a && a.delta!==0){
+        const cls=a.delta>0?'up':'down';
+        adj=`<span class="adj ${cls}">${a.delta>0?'+':''}${a.delta} kg / séance préc.</span>`;
+      }
+    }
+    // nom affiché : pendant une séance active, l'override de séance a priorité
+    const rez=resolveExo(ex, curDay, 'cur');
+    let dispName=rez.name;
+    if(active && ex.slot){
+      const se=SESSION.ex[ei];
+      if(se && typeof se.sessOverride==='string' && se.sessOverride.startsWith('equip:')) dispName=se.name;
+      else if(se && typeof se.sessOverride==='number' && rez.list[se.sessOverride]!=null) dispName=rez.list[se.sessOverride];
+      else if(se && se.name) dispName=se.name;
+    }
+    let swapBtns='';
+    let picker='';
+    if(ex.slot && rez.count>1){
+      const isCustom = rez.custom;
+      if(active){
+        swapBtns=`<div class="swaprow">
+          <button class="swap" onclick="openEquipPicker('${ex.slot}','session')" title="Remplacer seulement aujourd'hui selon le matériel dispo">🔧 pas cette séance</button>
+          <button class="swap alt" onclick="openEquipPicker('${ex.slot}','cycle')" title="Remplacer pour tout le cycle selon la salle">⇄ tout le cycle</button>
+        </div>`;
+      }else{
+        swapBtns=`<button class="swap alt" onclick="openEquipPicker('${ex.slot}','cycle')" title="Remplacer pour tout le cycle selon la salle">⇄ non faisable ce cycle</button>`;
+      }
+      // panneau matériel (si ouvert pour ce slot), filtré au muscle
+      if(equipPicker && equipPicker.slot===ex.slot){
+        const mode=equipPicker.mode;
+        const muscle=SLOT_MUSCLE[ex.slot]||'';
+        const eq=(CYCLE&&CYCLE.equip)||{};
+        const rel=relevantEquip(ex.slot);
+        const chips=rel.map(id=>
+          `<button class="chip ${eq[id]?'on':''}" onclick="toggleEquip('${id}')">${EQUIP[id]}</button>`).join('');
+        const intro = mode==='cycle'
+          ? `Remplacement <b>pour tout le cycle</b> (salle où tu es). Muscle : <b>${muscle}</b>. Coche le matériel disponible ici :`
+          : `Remplacement <b>juste pour cette séance</b>. Muscle : <b>${muscle}</b>. Coche le matériel libre en ce moment :`;
+        picker=`<div class="picker">
+          <div class="pklabel">${intro}</div>
+          <div class="chips">${chips}</div>
+          <button class="btn sm" style="margin-top:10px" onclick="chooseByEquip(${curDay},'${ex.slot}','${mode}')">Proposer un exercice</button>
+          ${isCustom&&mode==='cycle'?`<button class="btn sm ghost" style="margin-top:6px" onclick="resetCustom(${curDay},'${ex.slot}')">Revenir à l'exercice d'origine</button>`:''}
+        </div>`;
+      }
+    }
+    return `<div class="ex"><div class="top">
+        <div class="namerow"><div class="name">${dispName} ${adj}</div>
+          <div class="btnrow">
+            <button class="vid" onclick="watchExo('${dispName.replace(/'/g,"\\'")}')" title="Voir une vidéo de l'exercice">▶ vidéo</button>
+            ${active?'':swapBtns}
+          </div>
+        </div>
+        ${active&&swapBtns?`<div class="swapwrap">${swapBtns}</div>`:''}
+        ${picker}
+        <div class="meta">${ex.sets} × ${ex.reps} · repos ${ex.rest?Math.round(ex.rest/60*10)/10+' min':'—'}${isMain?` · départ ${baseLoad} kg`:''}</div>
+        ${ex.cue?`<div class="cue">${ex.cue}</div>`:''}
+      </div>${headMain}${warm}${sets}</div>`;
+  }).join('');
+
+  if(active){
+    body+=`<div class="row" style="margin-top:12px"><button class="btn ghost" onclick="cancelSession()">Annuler</button>
+      <button class="btn" onclick="finishSession()">Terminer & ajuster</button></div>`;
+  }else if(alreadyDone){
+    body+=`<div class="note blue">Séance déjà validée. Tu peux la refaire (ça écrasera l'entrée) ou passer à la suivante.</div>
+      <button class="btn ghost" onclick="startSession()" style="margin-top:4px">Refaire cette séance</button>`;
+  }else{
+    body+=`<button class="btn" onclick="startSession()" style="margin-top:12px">Démarrer cette séance</button>`;
+  }
+
+  // Fin de bloc : quand la semaine 8 (deload) est complète et le test PR pas encore fait
+  const week8done=[0,1,2,3].every(d=>CYCLE.dayDone[DELOAD_WEEK+'-'+d]);
+  if(week8done && !CYCLE.prTested){
+    body+=`<div class="miss" style="border-color:rgba(78,201,138,0.4);background:rgba(78,201,138,0.08)">
+      <div class="misshead" style="color:var(--ok)">Bloc terminé — teste tes maxs</div>
+      <div class="misstxt">Les 8 semaines sont bouclées. Place à la séance de test 1RM pour mettre à jour tes records.</div>
+      <button class="btn" onclick="go('prtest')">Aller à la séance de test PR</button>
+    </div>`;
+  }
+
+  m.innerHTML=wk+dstrip+body;
+}
+
+function pickWeek(w){ curWeek=w; equipPicker=null; render(); }
+function pickDay(i){ curDay=i; equipPicker=null; render(); }
+
+function dismissMissed(){ if(!CYCLE)return; CYCLE.missedDismissed=true; store.set('cycle',CYCLE); toast("On continue sur la lancée"); render(); }
+function rescheduleMissed(){
+  if(!CYCLE)return;
+  const missed=[];
+  for(let w=1;w<curWeek;w++){
+    const doneAny=[0,1,2,3].some(d=>CYCLE.dayDone[w+'-'+d]);
+    if(!doneAny)continue;
+    [0,1,2,3].forEach(d=>{ if(!CYCLE.dayDone[w+'-'+d]) missed.push({w,d}); });
+  }
+  if(!missed.length){ render(); return; }
+  // priorité au jour du plus gros mouvement : Bas B (terre)=2, Bas A (squat)=0, Haut A=1, Haut B=3
+  const prio={2:0,0:1,1:2,3:3};
+  missed.sort((a,b)=>prio[a.d]-prio[b.d]);
+  const pick=missed[0];
+  let target=null;
+  for(let d=0;d<4;d++){ if(!CYCLE.dayDone[curWeek+'-'+d]){ target=d; break; } }
+  if(target==null){ toast("Semaine déjà pleine — passe à la semaine suivante"); return; }
+  CYCLE.dayDone[pick.w+'-'+pick.d]='skipped';
+  curDay=pick.d;
+  store.set('cycle',CYCLE);
+  toast("Rattrapage : "+DAYS[pick.d].name);
+  render();
+}
+
+function startSession(){
+  const day=DAYS[curDay];
+  SESSION={week:curWeek, day:curDay, name:day.name,
+    ex:day.ex.map((ex,ei)=>({
+      name:resolveExo(ex, curDay, 'cur').name, slot:ex.slot||null, lift:ex.lift||null,
+      main:!!ex.main, targetReps:ex.targetReps||null,
+      sets:Array.from({length:ex.sets},(_,s)=>{
+        const load=ex.main?mainLoad(ex.lift,curWeek,ex.loadFactor):null;
+        return {w:load!==null?String(load):'', r:'', rpe:'', done:false};
+      })
+    }))};
+  store.set('session',SESSION); render();
+}
+function setVal(ei,s,f,v){if(!SESSION)return;SESSION.ex[ei].sets[s][f]=v;
+  if(f==='w'){ SESSION.ex[ei].sets[s].wEdited=true; }
+  if(f==='r'){ SESSION.ex[ei].sets[s].rEdited=true; }
+  store.set('session',SESSION);
+  render(); /* recalculer les suggestions en aval */ }
+function setRPE(ei,s,v){if(!SESSION)return;SESSION.ex[ei].sets[s].rpe=v;store.set('session',SESSION);render();}
+function toggleSet(ei,s,rest){if(!SESSION)return;const d=SESSION.ex[ei].sets[s];d.done=!d.done;store.set('session',SESSION);
+  if(d.done&&rest)restStart(rest);render();}
+function cancelSession(){if(confirm("Annuler la séance en cours ?")){SESSION=null;store.set('session',null);restStop();render();}}
+
+async function finishSession(){
+  if(!SESSION)return;
+  // met à jour la charge de départ de chaque lift principal pour la prochaine séance
+  SESSION.ex.forEach(e=>{ if(e.main && e.lift){ updateLiftFromSession(e, SESSION.week); } });
+  CYCLE.dayDone[SESSION.week+'-'+SESSION.day]=true;
+
+  const rec={date:new Date().toISOString(), week:SESSION.week, name:SESSION.name,
+    ex:SESSION.ex.map(e=>({name:e.name, main:e.main, sets:e.sets.filter(s=>s.done||s.w||s.r)}))};
+  LOG.unshift(rec);
+
+  // avancer automatiquement : prochaine séance non faite
+  let nw=SESSION.week, nd=SESSION.day+1;
+  while(nw<=8){
+    while(nd<4){ if(!CYCLE.dayDone[nw+'-'+nd]) break; nd++; }
+    if(nd<4 && !CYCLE.dayDone[nw+'-'+nd]) break;
+    nw++; nd=0;
+  }
+  if(nw<=8){ curWeek=nw; curDay=nd; CYCLE.week=nw; }
+
+  SESSION=null;
+  await store.set('session',null);
+  await store.set('cycle',CYCLE);
+  await store.set('log',LOG);
+
+  // message d'ajustement
+  const adjs=Object.entries(CYCLE.lastAdj).filter(([k,a])=>a.week===rec.week && a.delta!==0)
+    .map(([k,a])=>`${MAIN[k].label} ${a.delta>0?'+':''}${a.delta}kg`);
+  toast(adjs.length?("Ajusté : "+adjs.join(" · ")):"Séance enregistrée 💪");
+  go('today');
+}
+
+function renderCycle(m){
+  const totalDone=Object.values(CYCLE.dayDone).filter(Boolean).length;
+  const pct=Math.round(totalDone/32*100);
+  m.innerHTML=`<div class="card"><h2>Progression du cycle</h2>
+    <p class="muted">${totalDone} / 32 séances · ${pct}% du cycle</p>
+    <div class="bar"><i style="width:${pct}%"></i></div></div>
+    <div class="card"><h3 style="font-size:15px;margin-bottom:8px">Charges de travail actuelles</h3>
+    <div class="grid3">
+      <div class="pr"><div class="n">${CYCLE.loads.squat}</div><div class="l">Squat</div></div>
+      <div class="pr"><div class="n">${CYCLE.loads.bench}</div><div class="l">Couché</div></div>
+      <div class="pr"><div class="n">${CYCLE.loads.deadlift}</div><div class="l">Terre</div></div>
+    </div>
+    <p class="tiny" style="margin-top:10px">Ces valeurs évoluent seules à chaque séance selon ton ressenti. Combinées à la montée d'intensité hebdomadaire, elles déterminent la charge affichée.</p></div>
+    <div class="card"><h3 style="font-size:15px;margin-bottom:6px">Structure des 8 semaines</h3>
+    <div class="exline"><span>Sem. 1-2</span><span class="r">accumulation : reps de base, charge modérée</span></div>
+    <div class="exline"><span>Sem. 3-6</span><span class="r">intensification : reps ↓, charge ↑</span></div>
+    <div class="exline"><span>Sem. 7</span><span class="r">pic : reps les plus basses, plus lourd (proche du PR)</span></div>
+    <div class="exline"><span>Sem. 8</span><span class="r">deload (léger)</span></div>
+    <div class="exline"><span>Cycle suivant</span><span class="r">nouveaux accessoires + retester tes 1RM</span></div>
+    </div>
+    <div class="card"><h3 style="font-size:15px;margin-bottom:6px">Rotation des exercices</h3>
+    <p class="muted">Les gros mouvements (squat, couché, terre, militaire) restent fixes — c'est ce qui construit la force. Les accessoires changent à chaque nouveau cycle pour casser la lassitude. Pendant une séance : <b>🔧 pas cette séance</b> te demande quel matériel est libre et propose un exo du même muscle réalisable maintenant (sans changer ton programme) ; <b>⇄ tout le cycle</b> remplace l'exo pour la suite du cycle. Pour choisir à l'avance les exercices du prochain cycle, va dans l'onglet <b>Suivant</b>.</p></div>
+    <div class="card"><button class="btn" onclick="go('next')">Prévisualiser le cycle suivant</button>
+    <p class="tiny" style="margin-top:8px">Pense à mettre à jour tes records avant de basculer, si tu les as retestés.</p></div>`;
+}
+
+function renderNext(m){
+  const curNum=(CYCLE&&CYCLE.num)?CYCLE.num:1;
+  const nextNum=curNum+1;
+  let h=`<div class="card"><h2>Cycle ${nextNum} (à venir)</h2>
+    <p class="muted">Voici les exercices prévus pour ton prochain cycle. Les gros mouvements ne changent pas. Pour chaque accessoire, tu peux choisir la variante que tu feras — pratique si tu sais déjà que tu n'auras pas le matériel.</p></div>`;
+
+  DAYS.forEach((day,di)=>{
+    h+=`<div class="card"><h3 style="font-size:15px;margin-bottom:8px">${day.name}</h3>`;
+    day.ex.forEach(ex=>{
+      if(!ex.slot){
+        h+=`<div class="exline"><span>${ex.name}</span><span class="r">${ex.sets}×${ex.reps}</span></div>`;
+      }else{
+        const rez=resolveExo(ex, di, 'next');
+        const opts=rez.list.map((name,idx)=>`<option value="${idx}" ${idx===rez.idx?'selected':''}>${name}</option>`).join('');
+        h+=`<div class="nextrow">
+          <div class="nextsel"><select onchange="setNextExo(${di},'${ex.slot}',parseInt(this.value))">${opts}</select></div>
+          <span class="r">${ex.sets}×${ex.reps}</span>
+        </div>`;
+      }
+    });
+    h+=`</div>`;
+  });
+
+  const doneCount=Object.values(CYCLE.dayDone).filter(Boolean).length;
+  const allDone=doneCount>=32;
+  h+=`<div class="card">
+    ${allDone?`<div class="note">Ton cycle actuel est terminé. Tu peux basculer sur le cycle ${nextNum}.</div>`:`<div class="note blue">Tu peux basculer dès maintenant, mais ton cycle ${curNum} n'est pas fini (${doneCount}/32 séances).</div>`}
+    <button class="btn" onclick="startNextCycle()">Démarrer le cycle ${nextNum}</button>
+    <p class="tiny" style="margin-top:8px">Pense à mettre à jour tes records si tu les as retestés — ils redéfinissent les charges de départ.</p>
+  </div>`;
+  m.innerHTML=h;
+}
+function startNextCycle(){
+  if(!confirm("Passer au cycle suivant ? Les accessoires basculent sur les variantes prévisualisées et les gros mouvements repartent de tes records. (l'historique est conservé)"))return;
+  const prevNum=(CYCLE&&CYCLE.num)?CYCLE.num:1;
+  const carry=(CYCLE&&CYCLE.nextOverride)?CYCLE.nextOverride:{};
+  CYCLE=initCycle(prevNum, carry);
+  curWeek=1; curDay=0; SESSION=null;
+  store.set('cycle',CYCLE); store.set('session',null);
+  toast("Cycle "+CYCLE.num+" démarré");
+  go('today');
+}
+
+function renderPRTest(m){
+  // état du test dans CYCLE.prTest ; la cible se recale sur la perf réelle tant que rien n'est saisi
+  if(!CYCLE.prTest) CYCLE.prTest={ squat:{hit:''}, bench:{hit:''}, deadlift:{hit:''} };
+  ['squat','bench','deadlift'].forEach(k=>{
+    if(!CYCLE.prTest[k]) CYCLE.prTest[k]={hit:''};
+    // recalcule la cible à partir des résultats du cycle (ex. semaine 7)
+    CYCLE.prTest[k].target = estimatedMaxFromCycle(k);
+  });
+  store.set('cycle',CYCLE);
+  const lifts=[['squat','Squat'],['bench','Développé couché'],['deadlift','Soulevé de terre']];
+  let h=`<div class="card"><h2>Test des maxs — fin de bloc</h2>
+    <p class="muted">La cible de chaque mouvement est calculée à partir de ta <b>performance réelle de fin de bloc</b> (surtout la semaine 7 : charge, reps et RPE). Si tu as écrasé tes séries, la cible monte ; si tu as galéré, elle descend. Fais tes essais, note la charge max réussie, puis valide.</p></div>`;
+
+  lifts.forEach(([k,label])=>{
+    const t=CYCLE.prTest[k];
+    const att=prAttempts(t.target, k);
+    // origine de la cible : meilleure série réelle de fin de bloc
+    let srcTxt='';
+    const res=CYCLE.results&&CYCLE.results[k];
+    if(res){
+      let src=null, srcWk=null;
+      for(const wk of [7,6,5,4,3,2,1]){ if(res[wk]){ src=res[wk]; srcWk=wk; break; } }
+      if(src){
+        srcTxt=`<div class="note blue" style="font-size:12px;margin:6px 0">D'après ta semaine ${srcWk} : ${src.w} kg × ${src.r}${src.rpe?` @ RPE ${src.rpe}`:''} → 1RM estimé ${src.est} kg.</div>`;
+      }
+    } else {
+      srcTxt=`<div class="tiny" style="margin:4px 0 8px">Estimation planifiée (tu n'as pas encore fait la semaine 7).</div>`;
+    }
+    const rows=att.map(a=>`<div class="setrow wu">
+        <div class="si">${a.attempt?'🎯':'·'}</div>
+        <div class="wuw">${a.bar?'Barre':a.w+' kg'}</div>
+        <div class="wur">${a.r} rep${a.r>1?'s':''}${a.attempt?' (essai max)':''}</div>
+        <div></div><div></div>
+      </div>`).join('');
+    h+=`<div class="card"><h3 style="font-size:16px;margin-bottom:2px">${label}</h3>
+      <div class="muted" style="font-size:12px;margin-bottom:6px">Cible estimée : <b>${t.target} kg</b> · record actuel : ${PRmax[k]} kg</div>
+      ${srcTxt}
+      <div class="wuhead">Montée vers le max <span class="tiny">(non compté)</span></div>
+      ${rows}
+      <div style="margin-top:10px"><label>Charge max réussie (kg)</label>
+        <input inputmode="decimal" value="${t.hit}" onchange="setPRHit('${k}',this.value)" placeholder="ex. ${t.target}"></div>
+    </div>`;
+  });
+
+  h+=`<div class="card">
+    <button class="btn" onclick="validatePRTest()">Valider le test & mettre à jour mes maxs</button>
+    <p class="tiny" style="margin-top:8px">Tes maxs de travail passeront aux valeurs testées (ils pilotent les charges du prochain cycle). Un record absolu n'est relevé que si tu le bats ; il n'est jamais baissé automatiquement.</p>
+  </div>`;
+  m.innerHTML=h;
+}
+function setPRHit(k,v){ if(!CYCLE.prTest)return; CYCLE.prTest[k].hit=v; store.set('cycle',CYCLE); }
+function validatePRTest(){
+  if(!CYCLE.prTest)return;
+  const res=[];
+  ['squat','bench','deadlift'].forEach(k=>{
+    const hit=parseFloat(CYCLE.prTest[k].hit);
+    if(!hit||hit<=0) return;
+    PR[k]=hit;                          // max de travail = valeur testée
+    if(hit>PRmax[k]){ PRmax[k]=hit; res.push(label(k)+' ⭐ '+hit); } // nouveau record absolu
+    else res.push(label(k)+' '+hit);
+  });
+  store.set('pr',PR); store.set('prmax',PRmax);
+  CYCLE.prTested=true; store.set('cycle',CYCLE);
+  toast(res.length?("Maxs mis à jour : "+res.join(' · ')):"Aucune valeur saisie");
+  go('prs');
+}
+function label(k){ return k==='squat'?'Squat':k==='bench'?'Couché':'Terre'; }
+
+function renderPRs(m){
+  m.innerHTML=`<div class="card"><h2>Maxs de travail (1RM)</h2>
+    <p class="muted">Ces valeurs pilotent les charges. Elles sont mises à jour après la séance de test en fin de bloc, et peuvent baisser si tu perds en forme.</p>
+    <div class="grid3" style="margin:14px 0">
+      <div class="pr"><div class="n">${PR.bench}</div><div class="l">Couché</div></div>
+      <div class="pr"><div class="n">${PR.deadlift}</div><div class="l">Terre</div></div>
+      <div class="pr"><div class="n">${PR.squat}</div><div class="l">Squat</div></div>
+    </div>
+    <div class="grid3">
+      <div><label>Couché</label><input inputmode="decimal" id="prb" value="${PR.bench}"></div>
+      <div><label>Terre</label><input inputmode="decimal" id="prd" value="${PR.deadlift}"></div>
+      <div><label>Squat</label><input inputmode="decimal" id="prsq" value="${PR.squat}"></div>
+    </div>
+    <button class="btn" style="margin-top:12px" onclick="savePR()">Enregistrer</button>
+  </div>
+  <div class="card"><h3 style="font-size:15px;margin-bottom:6px">🏆 Records absolus</h3>
+    <p class="muted" style="margin-bottom:10px">Tes meilleurs maxs jamais réalisés. Ils ne baissent jamais tout seuls, même si tes maxs de travail descendent — c'est ta référence historique.</p>
+    <div class="grid3">
+      <div class="pr" style="border-color:rgba(240,168,58,0.4)"><div class="n">${PRmax.bench}</div><div class="l">Couché</div></div>
+      <div class="pr" style="border-color:rgba(240,168,58,0.4)"><div class="n">${PRmax.deadlift}</div><div class="l">Terre</div></div>
+      <div class="pr" style="border-color:rgba(240,168,58,0.4)"><div class="n">${PRmax.squat}</div><div class="l">Squat</div></div>
+    </div>
+  </div>
+  <div class="card"><h3 style="font-size:15px;margin-bottom:6px">Estimer un 1RM</h3>
+    <p class="muted" style="margin-bottom:10px">Formule d'Epley.</p>
+    <div class="grid2"><div><label>Poids (kg)</label><input inputmode="decimal" id="e1" oninput="estim()"></div>
+    <div><label>Reps</label><input inputmode="numeric" id="e2" oninput="estim()"></div></div>
+    <div id="eo" class="pr" style="margin-top:12px;display:none"><div class="n" id="en">—</div><div class="l">1RM estimé</div></div>
+  </div>`;
+}
+function savePR(){
+  PR.bench=parseFloat(document.getElementById('prb').value)||PR.bench;
+  PR.deadlift=parseFloat(document.getElementById('prd').value)||PR.deadlift;
+  PR.squat=parseFloat(document.getElementById('prsq').value)||PR.squat;
+  // relève les records absolus s'ils sont battus (jamais baissés ici)
+  ['bench','deadlift','squat'].forEach(k=>{ if(PR[k]>PRmax[k]) PRmax[k]=PR[k]; });
+  store.set('pr',PR); store.set('prmax',PRmax);
+  toast("Maxs enregistrés"); render();
+}
+function estim(){const w=parseFloat(document.getElementById('e1').value),r=parseInt(document.getElementById('e2').value);
+  const o=document.getElementById('eo');if(w>0&&r>0){o.style.display='block';document.getElementById('en').textContent=Math.round(w*(1+r/30))+' kg';}else o.style.display='none';}
+
+function renderHistory(m){
+  if(!LOG.length){m.innerHTML=`<div class="card"><div class="empty">Aucune séance enregistrée.<br>Termine une séance pour la voir ici.</div></div>`;return;}
+  m.innerHTML=`<div class="card"><h2>Historique</h2><p class="muted">${LOG.length} séance${LOG.length>1?'s':''}.</p></div>`+
+    LOG.map((s,i)=>{
+      const dt=new Date(s.date||Date.now());
+      const dstr=dt.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})+' · '+dt.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+      const exs=Array.isArray(s.ex)?s.ex:[];
+      const lines=exs.filter(e=>e && Array.isArray(e.sets) && e.sets.length).map(e=>{
+        const best=e.sets.reduce((a,b)=>{const wa=parseFloat(a.w)||0,wb=parseFloat(b.w)||0;return wb>wa?b:a;},{w:0});
+        const rpes=e.sets.map(x=>parseFloat(x.rpe)).filter(x=>!isNaN(x));
+        const rpeTxt=e.main&&rpes.length?` <span class="tiny">RPE ${(rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1)}</span>`:'';
+        return `<div class="exline"><span>${e.name||'Exercice'}${rpeTxt}</span><span class="r">${e.sets.length}× · ${best.w||'—'}kg</span></div>`;
+      }).join('');
+      return `<div class="card"><div class="row" style="justify-content:space-between">
+        <div><div style="font-weight:800">${s.name||'Séance'}</div><div class="muted" style="font-size:12px">Semaine ${s.week||'—'} · ${dstr}</div></div>
+        <button class="btn ghost sm" style="width:auto" onclick="delLog(${i})">Suppr.</button></div>
+        <div style="margin-top:8px">${lines}</div></div>`;
+    }).join('');
+}
+async function delLog(i){
+  if(!confirm("Supprimer cette séance ?"))return;
+  LOG.splice(i,1);
+  await store.set('log',LOG);
+  renderHistory(document.getElementById('main')); // re-render local, robuste
+}
+
+/* ================= INIT ================= */
+(async function(){
+  const pr=await store.get('pr'); if(pr)PR=pr;
+  const prm=await store.get('prmax'); if(prm)PRmax=prm; else { PRmax={...PR}; store.set('prmax',PRmax); }
+  // garantit que les records absolus ne sont jamais < aux maxs de travail connus
+  ['bench','deadlift','squat'].forEach(k=>{ if(PR[k]>PRmax[k]) PRmax[k]=PR[k]; });
+  const cy=await store.get('cycle'); if(cy){CYCLE=cy;curWeek=cy.week||1; if(!CYCLE.num)CYCLE.num=1; if(!CYCLE.nextOverride)CYCLE.nextOverride={}; if(!CYCLE.slotOverride)CYCLE.slotOverride={}; if(!CYCLE.slotCustom)CYCLE.slotCustom={}; if(!CYCLE.equip)CYCLE.equip={}; store.set('cycle',CYCLE);}
+  const log=await store.get('log'); if(log)LOG=log;
+  const ses=await store.get('session'); if(ses && sessionValid(ses)){SESSION=ses;curWeek=ses.week;curDay=ses.day;} else if(ses){ await store.set('session',null); }
+  render();
+})();
+
+/* ================= PWA : mode hors-ligne ================= */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+</script>
+</body>
+</html>
