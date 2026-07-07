@@ -1446,9 +1446,15 @@ async function resetAll(){
   render();
 })();
 
-/* ================= PWA : mode hors-ligne ================= */
+/* ================= PWA : mode hors-ligne + mise à jour automatique ================= */
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+  let refreshing=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(refreshing) return; refreshing=true; location.reload(); // recharge une fois quand une nouvelle version prend la main
+  });
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(reg=>{ try{reg.update();}catch(e){} }).catch(()=>{});
+  });
 }
 </script>
 </body>
