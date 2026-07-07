@@ -1,7 +1,9 @@
-/* Service worker Cycle 8 — cache l'app pour un fonctionnement 100% hors-ligne.
-   Stratégie : cache-first sur les fichiers de l'app, réseau ignoré pour les
-   domaines externes (ex. YouTube ouvert dans un nouvel onglet). */
-const CACHE = 'cycle8-v1';
+/* Service worker Cycle 8.
+   Stratégie "réseau d'abord" : quand tu as du réseau, tu obtiens TOUJOURS la
+   dernière version de l'app (et on met à jour le cache au passage) ; hors-ligne,
+   on sert la dernière version mise en cache. Les domaines externes (ex. YouTube)
+   ne sont pas interceptés. */
+const CACHE = 'cycle8-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -33,11 +35,13 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (url.origin !== location.origin) return; // laisse passer les ressources externes
 
+  // Réseau d'abord : on récupère la version à jour et on rafraîchit le cache ;
+  // en cas d'échec (hors-ligne), on retombe sur le cache, puis sur index.html.
   e.respondWith(
-    caches.match(req).then(cached => cached || fetch(req).then(res => {
+    fetch(req).then(res => {
       const copy = res.clone();
       caches.open(CACHE).then(c => c.put(req, copy));
       return res;
-    }).catch(() => caches.match('./index.html')))
+    }).catch(() => caches.match(req).then(c => c || caches.match('./index.html')))
   );
 });
