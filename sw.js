@@ -1,13 +1,14 @@
-/* Service worker Cycle 8 — cache l'app pour un fonctionnement 100% hors-ligne.
+/* Service worker BENCH+ — cache l'app pour un fonctionnement 100% hors-ligne.
    Stratégie : cache-first sur les fichiers de l'app, réseau ignoré pour les
    domaines externes (ex. YouTube ouvert dans un nouvel onglet). */
-const CACHE = 'cycle8-v1';
+const CACHE = 'benchplus-v1';
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icons/icon-180.png',
   './icons/icon-192.png',
+  './icons/icon-192-maskable.png',
   './icons/icon-512.png',
   './icons/icon-512-maskable.png',
   './icons/icon-32.png'
