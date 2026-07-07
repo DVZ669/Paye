@@ -787,7 +787,9 @@ function captureLiftResult(e, week){
   });
   if(best){
     if(!CYCLE.results[e.lift]) CYCLE.results[e.lift]={};
-    CYCLE.results[e.lift][week]=best;
+    // garde la meilleure estimation de la semaine (une séance technique allégée ne l'abaisse pas)
+    const existing = CYCLE.results[e.lift][week];
+    if(!existing || best.est > existing.est) CYCLE.results[e.lift][week]=best;
   }
 }
 function estimatedMaxFromCycle(lift){
@@ -820,28 +822,51 @@ function prAttempts(target, lift){
   return out;
 }
 
-/* En fin de séance : on met à jour la charge stockée du lift à partir de la
-   dernière série principale saisie (reps + RPE réels), pour la prochaine séance. */
+/* En fin de séance : on RECALCULE la charge de base du lift à partir de la CAPACITÉ
+   RÉELLE démontrée pendant la séance (meilleure série : charge + reps + RPE), ramenée
+   au RPE cible de la semaine. La semaine suivante — et toutes les suivantes — repart de
+   cette capacité. Sans plafond : trop facile → la charge monte franchement ; trop dur →
+   elle redescend. Les jours "technique" allégés ne pilotent pas la progression. */
 function updateLiftFromSession(e, week){
   // capture de la meilleure série de travail (pour l'estimation du test PR en fin de bloc)
   captureLiftResult(e, week);
-  if(week===DELOAD_WEEK) return; // pas de mise à jour de charge en deload
-  const target=rpeTarget(week);
-  // trouve la dernière série avec un RPE saisi (et sa charge réelle)
-  let last=null, lastReps=null, lastW=null;
-  e.sets.forEach(s=>{ if(s.rpe!=null && s.rpe!==''){ last=parseFloat(s.rpe); lastReps=parseFloat(s.r)||null; lastW=parseFloat(s.w)||null; } });
-  if(last==null) return;
-  const baseReps = e.targetReps||5;
-  const tReps = weekReps(baseReps, week);              // reps cibles de cette semaine
+  if(week===DELOAD_WEEK) return;              // pas de mise à jour de charge en deload
+  if((e.loadFactor||1) < 1) return;           // jour "technique" (allégé) : ne fait pas progresser la base
+  const target = rpeTarget(week);
+  const targetRIR = Math.max(0, 10 - target);
+  const baseReps = e.targetReps || 5;
+  const tReps = weekReps(baseReps, week);     // reps cibles de cette semaine
   const p = WEEK_PROG[week-1] || WEEK_PROG[0];
-  // charge réellement utilisée cette semaine (sinon reconstituée depuis la base)
-  const actual = lastW || (CYCLE.loads[e.lift]*p.mult);
-  // ajuste la charge réelle selon RPE/reps, puis reconvertit en charge de BASE (semaine 1)
-  const nextActual = suggestNextLoad(actual, target, last, tReps, lastReps);
-  const nextBase = roundW(nextActual / (p.mult||1));
+
+  // Capacité démontrée : pour chaque série valable (charge + reps + RPE réels), on estime
+  // un 1RM (Epley avec reps en réserve), puis la charge qui donnerait le RPE cible aux reps
+  // cibles. On retient la MEILLEURE série (une série ratée isolée ne fait pas chuter la charge).
+  let bestCap = null;
+  e.sets.forEach(s=>{
+    const w = parseFloat(s.w), r = parseFloat(s.r), rpe = parseFloat(s.rpe);
+    if(!w || !r || isNaN(rpe)) return;
+    const rir = Math.max(0, 10 - rpe);
+    const oneRM = w * (1 + (r + rir)/30);               // 1RM estimé de la série
+    const capW = oneRM / (1 + (tReps + targetRIR)/30);  // charge au RPE cible, reps cibles
+    if(bestCap === null || capW > bestCap) bestCap = capW;
+  });
+
+  let nextActual;
+  if(bestCap !== null){
+    nextActual = bestCap;                     // sans plafond : on cale sur la capacité réelle
+  }else{
+    // aucune série avec RPE : ajustement doux depuis la dernière série renseignée
+    let last=null, lastReps=null, lastW=null;
+    e.sets.forEach(s=>{ if(s.rpe!=null && s.rpe!==''){ last=parseFloat(s.rpe); lastReps=parseFloat(s.r)||null; lastW=parseFloat(s.w)||null; } });
+    if(last==null) return;                    // rien de saisi : on ne change rien
+    const actual = lastW || (CYCLE.loads[e.lift]*p.mult);
+    nextActual = suggestNextLoad(actual, target, last, tReps, lastReps);
+  }
+
+  const nextBase = roundW(nextActual / (p.mult||1));   // reconverti en charge de BASE (semaine 1)
   const before = CYCLE.loads[e.lift];
-  CYCLE.loads[e.lift]=nextBase;
-  CYCLE.lastAdj[e.lift]={delta: nextBase-before, week};
+  CYCLE.loads[e.lift] = nextBase;
+  CYCLE.lastAdj[e.lift] = {delta: nextBase - before, week};
 }
 
 /* ================= REST ================= */
@@ -1135,7 +1160,7 @@ function startSession(){
   SESSION={week:curWeek, day:curDay, name:day.name,
     ex:day.ex.map((ex,ei)=>({
       name:resolveExo(ex, curDay, 'cur').name, slot:ex.slot||null, lift:ex.lift||null,
-      main:!!ex.main, targetReps:ex.targetReps||null,
+      main:!!ex.main, targetReps:ex.targetReps||null, loadFactor:ex.loadFactor||1,
       sets:Array.from({length:ex.sets},(_,s)=>{
         const load=ex.main?mainLoad(ex.lift,curWeek,ex.loadFactor):null;
         return {w:load!==null?String(load):'', r:'', rpe:'', done:false};
