@@ -1389,7 +1389,12 @@ function estim(){const w=parseFloat(document.getElementById('e1').value),r=parse
   const o=document.getElementById('eo');if(w>0&&r>0){o.style.display='block';document.getElementById('en').textContent=Math.round(w*(1+r/30))+' kg';}else o.style.display='none';}
 
 function renderHistory(m){
-  if(!LOG.length){m.innerHTML=`<div class="card"><div class="empty">Aucune séance enregistrée.<br>Termine une séance pour la voir ici.</div></div>`;return;}
+  const resetCard=`<div class="card">
+    <h3 style="font-size:15px;margin-bottom:6px">Réinitialiser</h3>
+    <p class="muted" style="margin-bottom:10px">Efface <b>tout</b> : cycle en cours, séance, historique et records — et repart de zéro. Pratique après des essais. Action irréversible.</p>
+    <button class="btn ghost" onclick="resetAll()">Tout réinitialiser</button>
+  </div>`;
+  if(!LOG.length){m.innerHTML=`<div class="card"><div class="empty">Aucune séance enregistrée.<br>Termine une séance pour la voir ici.</div></div>`+resetCard;return;}
   m.innerHTML=`<div class="card"><h2>Historique</h2><p class="muted">${LOG.length} séance${LOG.length>1?'s':''}.</p></div>`+
     LOG.map((s,i)=>{
       const dt=new Date(s.date||Date.now());
@@ -1405,13 +1410,28 @@ function renderHistory(m){
         <div><div style="font-weight:800">${s.name||'Séance'}</div><div class="muted" style="font-size:12px">Semaine ${s.week||'—'} · ${dstr}</div></div>
         <button class="btn ghost sm" style="width:auto" onclick="delLog(${i})">Suppr.</button></div>
         <div style="margin-top:8px">${lines}</div></div>`;
-    }).join('');
+    }).join('')+resetCard;
 }
 async function delLog(i){
   if(!confirm("Supprimer cette séance ?"))return;
   LOG.splice(i,1);
   await store.set('log',LOG);
   renderHistory(document.getElementById('main')); // re-render local, robuste
+}
+// Remet l'app à zéro : efface cycle, séance, historique ET records, puis revient au démarrage.
+async function resetAll(){
+  if(!confirm("Tout réinitialiser ?\n\nCela efface le cycle en cours, la séance, l'historique ET les records. Action irréversible."))return;
+  CYCLE=null; SESSION=null; LOG=[];
+  PR={bench:130, deadlift:220, squat:190};
+  PRmax={bench:130, deadlift:220, squat:190};
+  curWeek=1; curDay=0; equipPicker=null; restStop();
+  await store.set('cycle',null);
+  await store.set('session',null);
+  await store.set('log',null);
+  await store.set('pr',PR);
+  await store.set('prmax',PRmax);
+  toast("Tout réinitialisé");
+  go('today');
 }
 
 /* ================= INIT ================= */
