@@ -196,10 +196,15 @@
 
 <script>
 /* ================= STORAGE ================= */
+/* Mode essai : quand TESTMODE est actif, toutes les clés sont préfixées "test:"
+   -> données de test séparées, le vrai programme reste intact. La clé "testmode"
+   elle-même n'est jamais préfixée (elle mémorise le mode). */
+let TESTMODE=false;
 const store={
-  async get(k){try{if(window.storage){const r=await window.storage.get(k);return r?JSON.parse(r.value):null;}}catch(e){}
+  nk(k){ return (TESTMODE && k!=='testmode') ? 'test:'+k : k; },
+  async get(k){k=this.nk(k);try{if(window.storage){const r=await window.storage.get(k);return r?JSON.parse(r.value):null;}}catch(e){}
     try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}},
-  async set(k,v){const s=JSON.stringify(v);try{if(window.storage){await window.storage.set(k,s);}}catch(e){}
+  async set(k,v){k=this.nk(k);const s=JSON.stringify(v);try{if(window.storage){await window.storage.set(k,s);}}catch(e){}
     try{localStorage.setItem(k,s);}catch(e){}}
 };
 
@@ -522,6 +527,7 @@ let PRmax={bench:130, deadlift:220, squat:190};   // records absolus, jamais bai
 let CYCLE=null;   // {start, week, dayDone:{ "w-d":true }, loads:{squat,bench,deadlift,ohp}, lastAdj:{} }
 let SESSION=null;
 let LOG=[];
+let EXW={};   // mémoire des poids par exercice (nom -> {w,r}) : repris aux prochaines séances/cycles
 let curWeek=1, curDay=0, view='today';
 
 /* ================= HELPERS ================= */
@@ -870,13 +876,51 @@ function updateLiftFromSession(e, week){
 }
 
 /* ================= REST ================= */
-let restInt=null,restLeft=0;
-function restStart(sec){restLeft=sec;const el=document.getElementById('rest');el.classList.add('show');
-  document.getElementById('restT').textContent=fmtT(restLeft);clearInterval(restInt);
-  restInt=setInterval(()=>{restLeft--;document.getElementById('restT').textContent=fmtT(Math.max(0,restLeft));
-    if(restLeft<=0){restStop();if(navigator.vibrate)navigator.vibrate([200,80,200]);toast("Repos terminé");}},1000);}
-function restAdd(s){restLeft+=s;document.getElementById('restT').textContent=fmtT(restLeft);}
-function restStop(){clearInterval(restInt);document.getElementById('rest').classList.remove('show');}
+/* Minuteur de repos basé sur l'HEURE RÉELLE (restEnd = timestamp de fin).
+   Le décompte reste juste même si l'app est mise en veille / l'écran verrouillé :
+   au retour, on recalcule le temps restant depuis l'horloge. À 0, notification + vibration. */
+let restInt=null, restEnd=0;
+function restStart(sec){
+  restEnd = Date.now() + sec*1000;
+  store.set('restEnd', restEnd);
+  const el=document.getElementById('rest'); el.classList.add('show');
+  requestNotifPermission();            // demande l'autorisation (geste utilisateur : clic "série faite")
+  restTick();
+  clearInterval(restInt);
+  restInt=setInterval(restTick, 250);
+}
+function restTick(){
+  if(!restEnd) return;
+  const left = Math.round((restEnd - Date.now())/1000);
+  const el=document.getElementById('restT'); if(el) el.textContent=fmtT(Math.max(0,left));
+  if(left<=0) restDone();
+}
+function restDone(){
+  clearInterval(restInt); restInt=null; restEnd=0; store.set('restEnd',0);
+  const el=document.getElementById('rest'); if(el) el.classList.remove('show');
+  if(navigator.vibrate) navigator.vibrate([300,120,300]);
+  notify("Repos terminé 💪","C'est reparti — série suivante.");
+  toast("Repos terminé");
+}
+function restAdd(s){ if(!restEnd) return; restEnd += s*1000; store.set('restEnd',restEnd); restTick(); }
+function restStop(){ clearInterval(restInt); restInt=null; restEnd=0; store.set('restEnd',0);
+  const el=document.getElementById('rest'); if(el) el.classList.remove('show'); }
+
+/* ----- Notifications (fin de repos) ----- */
+function requestNotifPermission(){
+  try{ if('Notification' in window && Notification.permission==='default'){ Notification.requestPermission(); } }catch(e){}
+}
+function notify(title, body){
+  try{
+    if('Notification' in window && Notification.permission==='granted'){
+      if(navigator.serviceWorker && navigator.serviceWorker.ready){
+        navigator.serviceWorker.ready
+          .then(reg=>reg.showNotification(title,{body, icon:'icons/icon-192.png', badge:'icons/icon-192.png', vibrate:[300,120,300], tag:'rest', renotify:true}))
+          .catch(()=>{ try{ new Notification(title,{body}); }catch(e){} });
+      } else { try{ new Notification(title,{body}); }catch(e){} }
+    }
+  }catch(e){}
+}
 
 /* ================= NAV ================= */
 function go(v){view=v;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.nav===v));render();window.scrollTo(0,0);}
@@ -885,7 +929,8 @@ function go(v){view=v;document.querySelectorAll('nav button').forEach(b=>b.class
 function render(){
   const m=document.getElementById('main');
   try{
-    document.getElementById('cycInfo').textContent = CYCLE ? `Cycle ${CYCLE.num} · Semaine ${curWeek} / 8` : "Non démarré";
+    const cycTxt = CYCLE ? `Cycle ${CYCLE.num} · Semaine ${curWeek} / 8` : "Non démarré";
+    document.getElementById('cycInfo').innerHTML = TESTMODE ? `<span style="color:var(--gold)">🧪 ESSAI</span> · ${cycTxt}` : cycTxt;
     if(!CYCLE){ renderStart(m); return; }
     if(view==='today') renderToday(m);
     else if(view==='cycle') renderCycle(m);
@@ -1158,14 +1203,20 @@ function rescheduleMissed(){
 function startSession(){
   const day=DAYS[curDay];
   SESSION={week:curWeek, day:curDay, name:day.name,
-    ex:day.ex.map((ex,ei)=>({
-      name:resolveExo(ex, curDay, 'cur').name, slot:ex.slot||null, lift:ex.lift||null,
-      main:!!ex.main, targetReps:ex.targetReps||null, loadFactor:ex.loadFactor||1,
-      sets:Array.from({length:ex.sets},(_,s)=>{
-        const load=ex.main?mainLoad(ex.lift,curWeek,ex.loadFactor):null;
-        return {w:load!==null?String(load):'', r:'', rpe:'', done:false};
-      })
-    }))};
+    ex:day.ex.map((ex,ei)=>{
+      const exName=resolveExo(ex, curDay, 'cur').name;
+      const mem = (!ex.main && EXW[exName]) ? EXW[exName] : null;  // poids mémorisé pour cet accessoire
+      return {
+        name:exName, slot:ex.slot||null, lift:ex.lift||null,
+        main:!!ex.main, targetReps:ex.targetReps||null, loadFactor:ex.loadFactor||1,
+        sets:Array.from({length:ex.sets},(_,s)=>{
+          const load=ex.main?mainLoad(ex.lift,curWeek,ex.loadFactor):null;
+          // gros mouvement : charge auto-régulée ; accessoire : dernier poids fait (mémoire), sinon vide
+          let w = load!==null ? String(load) : (mem && mem.w ? String(mem.w) : '');
+          return {w, r:'', rpe:'', done:false};
+        })
+      };
+    })};
   store.set('session',SESSION); render();
 }
 function setVal(ei,s,f,v){if(!SESSION)return;SESSION.ex[ei].sets[s][f]=v;
@@ -1187,6 +1238,15 @@ async function finishSession(){
   const rec={date:new Date().toISOString(), week:SESSION.week, name:SESSION.name,
     ex:SESSION.ex.map(e=>({name:e.name, main:e.main, sets:e.sets.filter(s=>s.done||s.w||s.r)}))};
   LOG.unshift(rec);
+
+  // mémorise le poids le plus lourd fait pour chaque exercice (repris à la prochaine
+  // apparition de cet exo : séance suivante ET cycle suivant, par nom d'exercice)
+  SESSION.ex.forEach(e=>{
+    let topW=0, topR='';
+    e.sets.forEach(s=>{ const w=parseFloat(s.w); if(!isNaN(w) && w>topW){ topW=w; topR=s.r||''; } });
+    if(topW>0 && e.name) EXW[e.name]={w:topW, r:topR};
+  });
+  await store.set('exWeights', EXW);
 
   // avancer automatiquement : prochaine séance non faite
   let nw=SESSION.week, nd=SESSION.day+1;
@@ -1389,12 +1449,19 @@ function estim(){const w=parseFloat(document.getElementById('e1').value),r=parse
   const o=document.getElementById('eo');if(w>0&&r>0){o.style.display='block';document.getElementById('en').textContent=Math.round(w*(1+r/30))+' kg';}else o.style.display='none';}
 
 function renderHistory(m){
+  const testCard=`<div class="card">
+    <h3 style="font-size:15px;margin-bottom:6px">Mode essai ${TESTMODE?'<span style="color:var(--gold)">(actif)</span>':''}</h3>
+    <p class="muted" style="margin-bottom:10px">${TESTMODE
+      ? 'Tu es sur des <b>données de test</b> : ton vrai programme et ton historique sont intacts. Reviens quand tu veux.'
+      : 'Teste des modifs sur des <b>données séparées</b>, sans toucher à ton vrai programme ni à ton historique.'}</p>
+    <button class="btn ${TESTMODE?'':'ghost'}" onclick="toggleTestMode()">${TESTMODE?'Revenir à mon vrai programme':'Passer en mode essai'}</button>
+  </div>`;
   const resetCard=`<div class="card">
     <h3 style="font-size:15px;margin-bottom:6px">Réinitialiser</h3>
-    <p class="muted" style="margin-bottom:10px">Efface <b>tout</b> : cycle en cours, séance, historique et records — et repart de zéro. Pratique après des essais. Action irréversible.</p>
+    <p class="muted" style="margin-bottom:10px">Efface <b>tout</b> ${TESTMODE?'(données de test)':'(vrai programme)'} : cycle en cours, séance, historique, records et poids mémorisés — et repart de zéro. Action irréversible.</p>
     <button class="btn ghost" onclick="resetAll()">Tout réinitialiser</button>
   </div>`;
-  if(!LOG.length){m.innerHTML=`<div class="card"><div class="empty">Aucune séance enregistrée.<br>Termine une séance pour la voir ici.</div></div>`+resetCard;return;}
+  if(!LOG.length){m.innerHTML=`<div class="card"><div class="empty">Aucune séance enregistrée.<br>Termine une séance pour la voir ici.</div></div>`+testCard+resetCard;return;}
   m.innerHTML=`<div class="card"><h2>Historique</h2><p class="muted">${LOG.length} séance${LOG.length>1?'s':''}.</p></div>`+
     LOG.map((s,i)=>{
       const dt=new Date(s.date||Date.now());
@@ -1410,7 +1477,7 @@ function renderHistory(m){
         <div><div style="font-weight:800">${s.name||'Séance'}</div><div class="muted" style="font-size:12px">Semaine ${s.week||'—'} · ${dstr}</div></div>
         <button class="btn ghost sm" style="width:auto" onclick="delLog(${i})">Suppr.</button></div>
         <div style="margin-top:8px">${lines}</div></div>`;
-    }).join('')+resetCard;
+    }).join('')+testCard+resetCard;
 }
 async function delLog(i){
   if(!confirm("Supprimer cette séance ?"))return;
@@ -1420,30 +1487,59 @@ async function delLog(i){
 }
 // Remet l'app à zéro : efface cycle, séance, historique ET records, puis revient au démarrage.
 async function resetAll(){
-  if(!confirm("Tout réinitialiser ?\n\nCela efface le cycle en cours, la séance, l'historique ET les records. Action irréversible."))return;
-  CYCLE=null; SESSION=null; LOG=[];
+  const scope = TESTMODE ? "les données de TEST" : "ton programme";
+  if(!confirm("Tout réinitialiser ?\n\nCela efface "+scope+" : cycle en cours, séance, historique, records ET poids mémorisés. Action irréversible."))return;
+  CYCLE=null; SESSION=null; LOG=[]; EXW={};
   PR={bench:130, deadlift:220, squat:190};
   PRmax={bench:130, deadlift:220, squat:190};
   curWeek=1; curDay=0; equipPicker=null; restStop();
   await store.set('cycle',null);
   await store.set('session',null);
   await store.set('log',null);
+  await store.set('exWeights',null);
   await store.set('pr',PR);
   await store.set('prmax',PRmax);
   toast("Tout réinitialisé");
   go('today');
 }
+// Bascule mode essai <-> vrai programme : recharge tout depuis l'espace de données correspondant.
+async function toggleTestMode(){
+  const entering=!TESTMODE;
+  if(entering && !confirm("Passer en MODE ESSAI ?\n\nTu bascules sur des données de test séparées. Ton vrai programme et ton historique restent intacts — tu reviens quand tu veux."))return;
+  TESTMODE=entering;
+  await store.set('testmode', TESTMODE);   // clé non préfixée : mémorise le mode
+  restStop();
+  await loadState();                        // recharge PR / cycle / historique / poids depuis le bon espace
+  toast(TESTMODE ? "Mode essai activé 🧪" : "Retour à ton vrai programme");
+  go('today');
+}
 
 /* ================= INIT ================= */
-(async function(){
+// Charge tout l'état depuis l'espace de données courant (réel ou test) puis rend l'écran.
+async function loadState(){
+  PR={bench:130, deadlift:220, squat:190};
+  PRmax={bench:130, deadlift:220, squat:190};
+  CYCLE=null; SESSION=null; LOG=[]; EXW={}; curWeek=1; curDay=0;
   const pr=await store.get('pr'); if(pr)PR=pr;
   const prm=await store.get('prmax'); if(prm)PRmax=prm; else { PRmax={...PR}; store.set('prmax',PRmax); }
   // garantit que les records absolus ne sont jamais < aux maxs de travail connus
   ['bench','deadlift','squat'].forEach(k=>{ if(PR[k]>PRmax[k]) PRmax[k]=PR[k]; });
   const cy=await store.get('cycle'); if(cy){CYCLE=cy;curWeek=cy.week||1; if(!CYCLE.num)CYCLE.num=1; if(!CYCLE.nextOverride)CYCLE.nextOverride={}; if(!CYCLE.slotOverride)CYCLE.slotOverride={}; if(!CYCLE.slotCustom)CYCLE.slotCustom={}; if(!CYCLE.equip)CYCLE.equip={}; store.set('cycle',CYCLE);}
+  const exw=await store.get('exWeights'); EXW = exw || {};
   const log=await store.get('log'); if(log)LOG=log;
   const ses=await store.get('session'); if(ses && sessionValid(ses)){SESSION=ses;curWeek=ses.week;curDay=ses.day;} else if(ses){ await store.set('session',null); }
   render();
+}
+
+(async function(){
+  TESTMODE = (await store.get('testmode'))===true;   // restaure le mode (clé non préfixée)
+  await loadState();
+  // reprise du minuteur de repos basé sur l'heure réelle (survit à une mise en veille)
+  const re=await store.get('restEnd');
+  if(re && re>Date.now()){ restEnd=re; const el=document.getElementById('rest'); if(el)el.classList.add('show'); restTick(); clearInterval(restInt); restInt=setInterval(restTick,250); }
+  else if(re){ await store.set('restEnd',0); }
+  // au retour au premier plan, on recalcule immédiatement le temps de repos restant
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden && restEnd) restTick(); });
 })();
 
 /* ================= PWA : mode hors-ligne + mise à jour automatique ================= */
