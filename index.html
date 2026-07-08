@@ -513,6 +513,10 @@ function suggestNextLoad(curW, targetRPE, actualRPE, targetReps, actualReps){
   let rpeGap = targetRPE - actualRPE;
   // écart reps : positif = plus de reps que prévu => monter
   let repGap = (actualReps!=null ? actualReps - targetReps : 0);
+  // ZONE DE TOLÉRANCE (anti-fatigue) : un écart de RPE de 1 ou moins, avec des reps
+  // proches de la cible, n'est PAS significatif → on garde la même charge. On ne
+  // réagit qu'à un écart net (>1 RPE) ou à un vrai décalage de reps.
+  if(Math.abs(rpeGap) <= 1 && Math.abs(repGap) <= 1) return curW;
   // conversion : chaque point de RPE ≈ 3% ; chaque rep d'écart ≈ 3%
   let pct = (rpeGap*0.03) + (repGap*0.03);
   // borne raisonnable par série : ±7%
@@ -857,8 +861,22 @@ function updateLiftFromSession(e, week){
     if(bestCap === null || capW > bestCap) bestCap = capW;
   });
 
+  // SIGNAL NET ? (zone de tolérance ±1 RPE). On ne bouge la charge que si :
+  //  - au moins 2 séries clairement faciles (RPE ≤ cible-1) → sustained, on monte ;
+  //  - ou 1 série très facile (écart ≥ 2) ;
+  //  - ou l'équivalent en trop dur → on baisse.
+  // Sinon, on est dans la cible (une série isolée un peu facile = fatigue/bruit) → on ne change rien.
+  let easyN=0, hardN=0, bigEasy=false, bigHard=false;
+  e.sets.forEach(s=>{ const rpe=parseFloat(s.rpe); if(isNaN(rpe)) return;
+    const gap = target - rpe;                 // >0 = plus facile que la cible
+    if(gap>=1) easyN++;   if(gap<=-1) hardN++;
+    if(gap>=2) bigEasy=true;   if(gap<=-2) bigHard=true;
+  });
+  const clearSignal = (easyN>=2 || bigEasy || hardN>=2 || bigHard);
+
   let nextActual;
   if(bestCap !== null){
+    if(!clearSignal){ CYCLE.lastAdj[e.lift]={delta:0, week}; return; }  // dans la cible : charge conservée
     nextActual = bestCap;                     // sans plafond : on cale sur la capacité réelle
   }else{
     // aucune série avec RPE : ajustement doux depuis la dernière série renseignée
