@@ -160,6 +160,19 @@
   .toast.show{opacity:1}
   .bar{height:7px;background:var(--panel2);border-radius:999px;overflow:hidden;margin-top:6px}
   .bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--gold));border-radius:999px}
+  /* accessoires : mouvements multiples (superset), poids du corps, gainage chrono */
+  .setrow.acc{grid-template-columns:30px 1fr 44px;align-items:center}
+  .movwrap{display:flex;flex-direction:column;gap:10px}
+  .movline{display:flex;flex-direction:column;gap:5px}
+  .movline + .movline{border-top:1px dashed var(--line);padding-top:9px}
+  .movname{font-size:12px;color:var(--dim);font-weight:700}
+  .movin{display:flex;gap:8px;align-items:center}
+  .movin input{padding:9px;text-align:center;font-size:15px;width:100%}
+  .diffs{display:flex;gap:5px;flex:0 0 auto}
+  .df{background:var(--panel2);border:1px solid var(--line);color:var(--dim);font-size:11px;font-weight:700;border-radius:8px;padding:9px 10px;white-space:nowrap}
+  .df.on{background:var(--gold);border-color:var(--gold);color:#1a1205}
+  .typebtn{background:transparent;border:1px solid var(--line);color:var(--dim);font-size:11px;font-weight:700;border-radius:8px;padding:5px 9px;white-space:nowrap}
+  .typebtn.set{border-color:rgba(240,168,58,0.5);color:var(--gold)}
 </style>
 </head>
 <body>
@@ -537,6 +550,41 @@ let curWeek=1, curDay=0, view='today';
 /* ================= HELPERS ================= */
 const roundW=w=>Math.round(w/2.5)*2.5;
 function fmtT(s){const m=Math.floor(s/60),x=s%60;return m+":"+String(x).padStart(2,'0');}
+
+/* ===== Type de mouvement : 'weight' (poids+reps), 'body' (reps, sans poids), 'hold' (gainage : temps+difficulté) =====
+   Classification automatique d'après le nom + le format des reps ("30s" = tenue chronométrée).
+   Corrigeable à la main via un bouton (CYCLE.kindOverride[clé] force le type de tout l'exo). */
+const HOLD_RE=/gainage|planche|hollow|wall ?sit|pallof|copenhagen|superman|dead ?bug|side plank|bird dog|\bhold\b/i;
+const BODY_RE=/crunch|relev|roue|ab ?wheel|v-?up|russian|toes|knee raise|mountain|nordic|pistol|pompe|dragon|hanging|clamshell|monster|fire hydrant/i;
+const EQUIP_RE=/poulie|c[aâ]ble|cable|machine|lest|halt[eè]re|barre|kettlebell|smith|\bez\b|hip thrust|presse|hack|curl|d[ée]velopp|rowing|tirage|traction|dips|swing|goblet|gobelet/i;
+function autoKind(name, repTok){
+  const n=name||'', t=String(repTok||'').trim();
+  if(/\d\s*s$/i.test(t) || HOLD_RE.test(n)) return 'hold';
+  if(BODY_RE.test(n) && !EQUIP_RE.test(n)) return 'body';
+  return 'weight';
+}
+function holdSecs(repTok){ const m=String(repTok||'').match(/(\d+)\s*s/i); return m?parseInt(m[1]):null; }
+function kindLabel(k){ return k==='weight'?'avec poids':k==='body'?'poids du corps':k==='hold'?'gainage':'auto'; }
+// mouvements d'un exo (1, ou 2 pour un superset "A + B") avec leur type
+function exMovements(ex, di, dispName, key){
+  const parts=String(dispName).replace(/\(superset\)/ig,'').split('+').map(x=>x.trim()).filter(Boolean);
+  const reps=String(ex.reps||'').split('+').map(x=>x.trim());
+  const ov=(CYCLE&&CYCLE.kindOverride)?CYCLE.kindOverride[key]:null;
+  return (parts.length?parts:[String(dispName)]).map((nm,i)=>{
+    const rt=reps[i]||reps[0]||ex.reps||'';
+    return { name:nm, repTok:rt, kind: ov || autoKind(nm, rt) };
+  });
+}
+function cycleKind(di, key){
+  if(!CYCLE.kindOverride) CYCLE.kindOverride={};
+  const order=[null,'weight','body','hold'];
+  const cur=CYCLE.kindOverride[key]||null;
+  const nx=order[(order.indexOf(cur)+1)%order.length];
+  if(nx===null) delete CYCLE.kindOverride[key]; else CYCLE.kindOverride[key]=nx;
+  store.set('cycle',CYCLE);
+  toast('Type : '+kindLabel(nx));
+  render();
+}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2000);}
 
 function initCycle(prevCycleNum, carryNextOverride){
@@ -1028,6 +1076,17 @@ function renderToday(m){
     const isMain=ex.main;
     const baseLoad=isMain?mainLoad(ex.lift,curWeek,ex.loadFactor):null;
     const tgtRPE=rpeTarget(curWeek);
+    // nom affiché (tient compte des remplacements de séance) — remonté ici car utilisé par les mouvements
+    const rez=resolveExo(ex, curDay, 'cur');
+    let dispName=rez.name;
+    if(active && ex.slot){
+      const se=SESSION.ex[ei];
+      if(se && typeof se.sessOverride==='string' && se.sessOverride.startsWith('equip:')) dispName=se.name;
+      else if(se && typeof se.sessOverride==='number' && rez.list[se.sessOverride]!=null) dispName=rez.list[se.sessOverride];
+      else if(se && se.name) dispName=se.name;
+    }
+    const exKey = slotKey(curDay, ex.slot||('x'+ei));
+    const movements = isMain ? null : exMovements(ex, curDay, dispName, exKey);
     let sets='';
     let headMain = isMain
       ? `<div class="rowhead"><span></span><span>Charge</span><span>Reps${ex.targetReps?` /${weekReps(ex.targetReps,curWeek)}`:''}</span><span>RPE /${tgtRPE}</span><span></span></div>`
@@ -1097,10 +1156,45 @@ function renderToday(m){
           <div class="chk ${done?'done':''}" onclick="${active?`toggleSet(${ei},${s},${ex.rest||90})`:''}">${done?'✓':''}</div>
         </div>`;
       }else{
-        sets+=`<div class="setrow">
+        // accessoire : une ligne de saisie par mouvement, selon son type
+        const movHtml = movements.map((mov,mi)=>{
+          const mm = (sd && sd.m && sd.m[mi]) ? sd.m[mi] : {};
+          const nm = mov.name;
+          if(mov.kind==='hold'){
+            const tVal = (mm.t!=null&&mm.t!=='')?mm.t:'';
+            const df = mm.d||'';
+            return `<div class="movline">
+              <div class="movname">${nm} <span class="tiny">tenue (sec)</span></div>
+              <div class="movin">
+                <input inputmode="numeric" placeholder="sec" value="${tVal}" onchange="setMov(${ei},${s},${mi},'t',this.value)" ${active?'':'disabled'} style="max-width:90px">
+                <div class="diffs">
+                  <button class="df ${df==='easy'?'on':''}" onclick="${active?`setMovDiff(${ei},${s},${mi},'easy')`:''}">Facile</button>
+                  <button class="df ${df==='ok'?'on':''}" onclick="${active?`setMovDiff(${ei},${s},${mi},'ok')`:''}">Correct</button>
+                  <button class="df ${df==='hard'?'on':''}" onclick="${active?`setMovDiff(${ei},${s},${mi},'hard')`:''}">Dur</button>
+                </div>
+              </div>
+            </div>`;
+          }
+          if(mov.kind==='body'){
+            const rVal2 = (mm.r!=null&&mm.r!=='')?mm.r:'';
+            return `<div class="movline">
+              <div class="movname">${nm} <span class="tiny">poids du corps</span></div>
+              <div class="movin"><input inputmode="numeric" placeholder="reps" value="${rVal2}" onchange="setMov(${ei},${s},${mi},'r',this.value)" ${active?'':'disabled'}></div>
+            </div>`;
+          }
+          const wV = (mm.w!=null&&mm.w!=='')?mm.w:'';
+          const rV = (mm.r!=null&&mm.r!=='')?mm.r:'';
+          return `<div class="movline">
+            ${movements.length>1?`<div class="movname">${nm}</div>`:''}
+            <div class="movin">
+              <input inputmode="decimal" placeholder="kg" value="${wV}" onchange="setMov(${ei},${s},${mi},'w',this.value)" ${active?'':'disabled'}>
+              <input inputmode="numeric" placeholder="reps" value="${rV}" onchange="setMov(${ei},${s},${mi},'r',this.value)" ${active?'':'disabled'}>
+            </div>
+          </div>`;
+        }).join('');
+        sets+=`<div class="setrow acc">
           <div class="si">${s+1}</div>
-          <div><input inputmode="decimal" placeholder="kg" value="${wVal}" onchange="setVal(${ei},${s},'w',this.value)" ${active?'':'disabled'}></div>
-          <div><input inputmode="numeric" placeholder="reps" value="${rVal}" onchange="setVal(${ei},${s},'r',this.value)" ${active?'':'disabled'}></div>
+          <div class="movwrap">${movHtml}</div>
           <div class="chk ${done?'done':''}" onclick="${active?`toggleSet(${ei},${s},${ex.rest||90})`:''}">${done?'✓':''}</div>
         </div>`;
       }
@@ -1114,14 +1208,12 @@ function renderToday(m){
         adj=`<span class="adj ${cls}">${a.delta>0?'+':''}${a.delta} kg / séance préc.</span>`;
       }
     }
-    // nom affiché : pendant une séance active, l'override de séance a priorité
-    const rez=resolveExo(ex, curDay, 'cur');
-    let dispName=rez.name;
-    if(active && ex.slot){
-      const se=SESSION.ex[ei];
-      if(se && typeof se.sessOverride==='string' && se.sessOverride.startsWith('equip:')) dispName=se.name;
-      else if(se && typeof se.sessOverride==='number' && rez.list[se.sessOverride]!=null) dispName=rez.list[se.sessOverride];
-      else if(se && se.name) dispName=se.name;
+    // (nom affiché « dispName » et « rez » calculés plus haut)
+    // bouton de correction du type de saisie (accessoires uniquement)
+    let typeBtn='';
+    if(!isMain){
+      const ov=CYCLE.kindOverride&&CYCLE.kindOverride[exKey];
+      typeBtn=`<button class="typebtn ${ov?'set':''}" onclick="cycleKind(${curDay},'${exKey}')" title="Type de saisie : avec poids / poids du corps / gainage">⚙︎ ${kindLabel(ov)}</button>`;
     }
     let swapBtns='';
     let picker='';
@@ -1158,6 +1250,7 @@ function renderToday(m){
         <div class="namerow"><div class="name">${dispName} ${adj}</div>
           <div class="btnrow">
             <button class="vid" onclick="watchExo('${dispName.replace(/'/g,"\\'")}')" title="Voir une vidéo de l'exercice">▶ vidéo</button>
+            ${typeBtn}
             ${active?'':swapBtns}
           </div>
         </div>
@@ -1223,15 +1316,28 @@ function startSession(){
   SESSION={week:curWeek, day:curDay, name:day.name,
     ex:day.ex.map((ex,ei)=>{
       const exName=resolveExo(ex, curDay, 'cur').name;
-      const mem = (!ex.main && EXW[exName]) ? EXW[exName] : null;  // poids mémorisé pour cet accessoire
+      const key=slotKey(curDay, ex.slot||('x'+ei));
+      const movements = ex.main ? null : exMovements(ex, curDay, exName, key);
       return {
         name:exName, slot:ex.slot||null, lift:ex.lift||null,
         main:!!ex.main, targetReps:ex.targetReps||null, loadFactor:ex.loadFactor||1,
         sets:Array.from({length:ex.sets},(_,s)=>{
-          const load=ex.main?mainLoad(ex.lift,curWeek,ex.loadFactor):null;
-          // gros mouvement : charge auto-régulée ; accessoire : dernier poids fait (mémoire), sinon vide
-          let w = load!==null ? String(load) : (mem && mem.w ? String(mem.w) : '');
-          return {w, r:'', rpe:'', done:false};
+          // gros mouvement : charge auto-régulée (modèle w/r/rpe inchangé)
+          if(ex.main){
+            const load=mainLoad(ex.lift,curWeek,ex.loadFactor);
+            return {w:load!==null?String(load):'', r:'', rpe:'', done:false};
+          }
+          // accessoire : une entrée par mouvement, pré-remplie depuis la mémoire
+          const m = movements.map(mov=>{
+            if(mov.kind==='hold'){
+              const t=(EXW[mov.name]&&EXW[mov.name].t!=null)?EXW[mov.name].t:holdSecs(mov.repTok);
+              return {t: t!=null?String(t):'', d:''};
+            }
+            if(mov.kind==='body') return {r:''};
+            const w=(EXW[mov.name]&&EXW[mov.name].w!=null)?EXW[mov.name].w:'';
+            return {w: w!==''?String(w):'', r:''};
+          });
+          return {done:false, m};
         })
       };
     })};
@@ -1243,6 +1349,9 @@ function setVal(ei,s,f,v){if(!SESSION)return;SESSION.ex[ei].sets[s][f]=v;
   store.set('session',SESSION);
   render(); /* recalculer les suggestions en aval */ }
 function setRPE(ei,s,v){if(!SESSION)return;SESSION.ex[ei].sets[s].rpe=v;store.set('session',SESSION);render();}
+// saisie par mouvement (accessoires / supersets / gainage)
+function setMov(ei,s,mi,f,v){ if(!SESSION)return; const st=SESSION.ex[ei].sets[s]; if(!st.m)st.m=[]; if(!st.m[mi])st.m[mi]={}; st.m[mi][f]=v; store.set('session',SESSION); }
+function setMovDiff(ei,s,mi,d){ if(!SESSION)return; const st=SESSION.ex[ei].sets[s]; if(!st.m)st.m=[]; if(!st.m[mi])st.m[mi]={}; st.m[mi].d=d; store.set('session',SESSION); render(); }
 function toggleSet(ei,s,rest){if(!SESSION)return;const d=SESSION.ex[ei].sets[s];d.done=!d.done;store.set('session',SESSION);
   if(d.done&&rest)restStart(rest);render();}
 function cancelSession(){if(confirm("Annuler la séance en cours ?")){SESSION=null;store.set('session',null);restStop();render();}}
@@ -1253,16 +1362,41 @@ async function finishSession(){
   SESSION.ex.forEach(e=>{ if(e.main && e.lift){ updateLiftFromSession(e, SESSION.week); } });
   CYCLE.dayDone[SESSION.week+'-'+SESSION.day]=true;
 
-  const rec={date:new Date().toISOString(), week:SESSION.week, name:SESSION.name,
-    ex:SESSION.ex.map(e=>({name:e.name, main:e.main, sets:e.sets.filter(s=>s.done||s.w||s.r)}))};
+  const day=DAYS[SESSION.day];
+  const recEx = SESSION.ex.map((e,ei)=>{
+    if(e.main) return {name:e.name, main:true, sets:e.sets.filter(s=>s.done||s.w||s.r)};
+    const dex=day.ex[ei];
+    const key=slotKey(SESSION.day,(dex&&dex.slot)||('x'+ei));
+    const movs=exMovements(dex, SESSION.day, e.name, key);
+    return {name:e.name, main:false, movs:movs.map(mo=>({name:mo.name, kind:mo.kind})),
+      sets:e.sets.filter(s=> s.done || (s.m&&s.m.some(x=> x&&(x.w||x.r||x.t))) )};
+  });
+  const rec={date:new Date().toISOString(), week:SESSION.week, name:SESSION.name, ex:recEx};
   LOG.unshift(rec);
 
-  // mémorise le DERNIER poids saisi pour chaque exercice (repris à la prochaine
-  // apparition de cet exo : séance suivante ET cycle suivant, par nom d'exercice)
-  SESSION.ex.forEach(e=>{
-    let lastW=null, lastR='';
-    e.sets.forEach(s=>{ const w=parseFloat(s.w); if(!isNaN(w) && w>0){ lastW=w; lastR=s.r||''; } });
-    if(lastW!==null && e.name) EXW[e.name]={w:lastW, r:lastR};
+  // mémorise, PAR MOUVEMENT, la dernière valeur saisie (repris à la prochaine apparition
+  // de l'exo : séance suivante ET cycle suivant). Poids -> dernier kg ; gainage -> dernier
+  // temps, +15 s si noté "Facile" (sinon on garde le même temps).
+  SESSION.ex.forEach((e,ei)=>{
+    if(e.main) return;
+    const dex=day.ex[ei];
+    const key=slotKey(SESSION.day,(dex&&dex.slot)||('x'+ei));
+    const movs=exMovements(dex, SESSION.day, e.name, key);
+    movs.forEach((mov,mi)=>{
+      if(mov.kind==='hold'){
+        // temps : dernière tenue saisie ; difficulté : agrégée (un "Dur" prime, sinon un "Facile" -> +15s)
+        let lastT=null; const diffs=[];
+        e.sets.forEach(s=>{ const mm=s.m&&s.m[mi]; if(!mm)return;
+          const t=parseFloat(mm.t); if(!isNaN(t)&&t>0) lastT=t;
+          if(mm.d) diffs.push(mm.d);
+        });
+        if(lastT!=null){ const bump=(diffs.includes('easy')&&!diffs.includes('hard'))?15:0; EXW[mov.name]={t:lastT+bump}; }
+      } else if(mov.kind==='weight'){
+        let lastW=null;
+        e.sets.forEach(s=>{ const mm=s.m&&s.m[mi]; if(!mm)return; const w=parseFloat(mm.w); if(!isNaN(w)&&w>0) lastW=w; });
+        if(lastW!=null) EXW[mov.name]={w:lastW};
+      }
+    });
   });
   await store.set('exWeights', EXW);
 
@@ -1486,6 +1620,19 @@ function renderHistory(m){
       const dstr=dt.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})+' · '+dt.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
       const exs=Array.isArray(s.ex)?s.ex:[];
       const lines=exs.filter(e=>e && Array.isArray(e.sets) && e.sets.length).map(e=>{
+        // accessoire multi-mouvement (poids / poids du corps / gainage) : résumé par mouvement
+        if(e.movs && e.movs.length){
+          const parts=e.movs.map((mov,mi)=>{
+            let val='—';
+            for(let k=e.sets.length-1;k>=0;k--){ const mm=e.sets[k].m&&e.sets[k].m[mi]; if(!mm)continue;
+              if(mov.kind==='hold'){ if(mm.t){ val=mm.t+'s'; break; } }
+              else if(mov.kind==='body'){ if(mm.r){ val=mm.r+' reps'; break; } }
+              else { if(mm.w){ val=mm.w+'kg'; break; } }
+            }
+            return e.movs.length>1 ? `${mov.name} ${val}` : val;
+          });
+          return `<div class="exline"><span>${e.name||'Exercice'}</span><span class="r">${e.sets.length}× · ${parts.join(' / ')}</span></div>`;
+        }
         const best=e.sets.reduce((a,b)=>{const wa=parseFloat(a.w)||0,wb=parseFloat(b.w)||0;return wb>wa?b:a;},{w:0});
         const rpes=e.sets.map(x=>parseFloat(x.rpe)).filter(x=>!isNaN(x));
         const rpeTxt=e.main&&rpes.length?` <span class="tiny">RPE ${(rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1)}</span>`:'';
