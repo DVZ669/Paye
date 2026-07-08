@@ -1239,12 +1239,12 @@ async function finishSession(){
     ex:SESSION.ex.map(e=>({name:e.name, main:e.main, sets:e.sets.filter(s=>s.done||s.w||s.r)}))};
   LOG.unshift(rec);
 
-  // mémorise le poids le plus lourd fait pour chaque exercice (repris à la prochaine
+  // mémorise le DERNIER poids saisi pour chaque exercice (repris à la prochaine
   // apparition de cet exo : séance suivante ET cycle suivant, par nom d'exercice)
   SESSION.ex.forEach(e=>{
-    let topW=0, topR='';
-    e.sets.forEach(s=>{ const w=parseFloat(s.w); if(!isNaN(w) && w>topW){ topW=w; topR=s.r||''; } });
-    if(topW>0 && e.name) EXW[e.name]={w:topW, r:topR};
+    let lastW=null, lastR='';
+    e.sets.forEach(s=>{ const w=parseFloat(s.w); if(!isNaN(w) && w>0){ lastW=w; lastR=s.r||''; } });
+    if(lastW!==null && e.name) EXW[e.name]={w:lastW, r:lastR};
   });
   await store.set('exWeights', EXW);
 
