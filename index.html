@@ -291,7 +291,7 @@ const DAYS = [
     {slot:"incline", sets:4, reps:"8-10", rest:90, alt:["Développé incliné haltères","Développé incliné barre","Développé décliné","Développé haltères à plat","Développé prise serrée","Couché guidé (Smith)","Écarté incliné","Pec deck","Écarté poulie","Développé incliné machine","Pompes lestées","Développé décliné haltères"]},
     {slot:"row", sets:4, reps:"8", rest:120, alt:["Rowing barre","Rowing Yates","Rowing Pendlay","Rowing au Smith","Seal row","Inverted row","Rowing menton","Rowing poulie basse"]},
     {slot:"arms", sets:3, reps:"12", rest:75, alt:["Extensions corde + curl haltères","Dips + curl marteau","Barre au front + curl pupitre","Triceps machine + curl machine","Extensions haltère + curl incliné","Kickback + curl araignée","Triceps overhead + curl barre","Extensions poulie + curl concentré","Dips lestés + curl poulie","Pompes serrées + curl haltères"]},
-    {slot:"delt", sets:5, reps:"15", rest:45, alt:["Élévations latérales","Élévations latérales poulie","Oiseau (rear delt)","Développé Arnold léger","Élévations frontales","Reverse pec deck","Y-raise incliné","Élévations latérales machine","Oiseau poulie","Face pull","Élévations latérales élastique","Upright row corde"]},
+    {slot:"delt", sets:4, reps:"15", rest:45, alt:["Élévations latérales","Élévations latérales poulie","Oiseau (rear delt)","Développé Arnold léger","Élévations frontales","Reverse pec deck","Y-raise incliné","Élévations latérales machine","Oiseau poulie","Face pull","Élévations latérales élastique","Upright row corde"]},
   ]},
 ];
 
@@ -1049,7 +1049,7 @@ function renderToday(m){
   }
 
   let body=missedBanner+`<div class="note ${curWeek===DELOAD_WEEK?'blue':''}">${marginText(curWeek)}</div>`;
-  if(curWeek!==DELOAD_WEEK) body+=`<div class="note blue">Accessoires : pousse chaque exo <b>proche de l'échec</b> (1–2 reps en réserve) — c'est ce qui déclenche l'hypertrophie.</div>`;
+  if(curWeek!==DELOAD_WEEK) body+=`<div class="note blue">Objectif : <b>force au squat / couché / terre</b>. Les gros lifts pilotent tout (reste au RPE cible, pas à l'échec). Les accessoires vont <b>proche de l'échec</b> (1–2 reps en réserve) pour faire grossir les muscles qui portent ces lifts.</div>`;
 
   body+=day.ex.map((ex,ei)=>{
     const isMain=ex.main;
