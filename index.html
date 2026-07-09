@@ -250,7 +250,7 @@ const MAIN = {
 const DAYS = [
   {name:"Bas A (Squat)", ex:[
     {lift:"squat", main:true, name:"Squat", sets:4, reps:"5", targetReps:5, rest:180, cue:"Note reps + RPE à chaque série : la charge de la série suivante s'adapte."},
-    {slot:"hinge", sets:3, reps:"8", rest:120, alt:["Soulevé de terre roumain","Hip thrust barre","Good morning","Rack pull","Hyperextension lestée","Hip thrust machine","Deadlift jambes tendues"]},
+    {slot:"hinge", sets:3, reps:"8", rest:120, alt:["Soulevé de terre roumain","Good morning","Rack pull","Hyperextension lestée","Deadlift jambes tendues","Soulevé de terre déficit","Snatch-grip deadlift","Soulevé de terre pause sous genou"]},
     {slot:"quad", sets:3, reps:"10-12", rest:90, alt:["Presse à cuisses","Hack squat","Leg extension","Squat gobelet","Belt squat","Leg press unilatéral","Presse à cuisses pieds bas"]},
     {slot:"ham", sets:3, reps:"12", rest:75, alt:["Leg curl allongé","Leg curl assis","Nordic curl","Leg curl unilatéral","Leg curl debout","Razor curl","Glute-ham raise"]},
     {superset:true, slot:"abs", sets:3, reps:"12 + 12", rest:60, alt:[
@@ -285,7 +285,7 @@ const DAYS = [
     {lift:"deadlift", main:true, name:"Soulevé de terre", sets:4, reps:"4", targetReps:4, rest:210, cue:"Reps + RPE à chaque série."},
     {slot:"squatvar", sets:3, reps:"8", rest:120, alt:["Squat avant","Squat aux épingles","Squat pause 3 s","Box squat","Zercher squat","Squat au Smith","Front squat haltères","Squat tempo 3-0-3"]},
     {slot:"unilat", sets:3, reps:"10 / jambe", rest:90, alt:["Fentes marchées","Fentes arrière","Step-up sur banc","Split squat bulgare","Fentes avant lestées","Step-up latéral","Lunge au Smith","Fentes bulgares déficit"]},
-    {slot:"ham", sets:3, reps:"10-12", rest:90, alt:["Soulevé roumain haltères","Soulevé roumain barre","Soulevé roumain au Smith","Soulevé de terre déficit","Snatch-grip deadlift","Soulevé de terre pause sous genou","Good morning léger","Pont fessier lesté"]},
+    {slot:"glute", sets:3, reps:"10-12", rest:90, alt:["Hip thrust barre","Hip thrust machine","Pont fessier lesté","Hip thrust une jambe","Hip thrust pieds surélevés","Kickback poulie","Glute bridge lesté","Abduction à la hanche"]},
   ]},
   {name:"Haut B (Volume)", ex:[
     {lift:"bench", main:true, name:"Couché (technique)", sets:5, reps:"3", targetReps:3, rest:150, cue:"Jour technique : ~90% du couché lourd, plus léger et explosif. Reste loin de l'échec (ne force pas) — ça ne compte pas dans la progression, c'est de la vitesse.", loadFactor:0.9, rpeDelta:-1.5},
@@ -313,6 +313,7 @@ const TECH = {
   arms:"Coudes fixes, amplitude complète. Contracte à fond en position courte, contrôle la descente. Ne balance pas la charge.",
   incline:"Omoplates serrées, descends contrôlé jusqu'au haut des pecs, sens l'étirement. Pousse sans verrouiller sèchement les coudes.",
   delt:"Charge légère, mouvement strict sans élan. Monte jusqu'à l'horizontale, contrôle la descente lentement.",
+  glute:"Fessiers : pousse par les talons, verrouille la hanche en haut et serre les fessiers 1 s. Menton rentré, côtes basses, ne cambre pas le bas du dos.",
   abs:"Mouvement lent, expire en contractant. Gainage : corps parfaitement aligné, fessiers et abdos serrés, ne creuse pas le bas du dos."
 };
 
@@ -342,7 +343,7 @@ const SLOT_MUSCLE = {
   squatvar:"quadriceps", unilat:"jambes (unilatéral)", adduct:"adducteurs",
   adductB:"adducteurs/abducteurs", vpull:"dos (vertical)", hpull:"dos (horizontal)",
   row:"dos (horizontal)", lat:"dos (lats)", arms:"bras", incline:"pectoraux",
-  delt:"épaules", abs:"abdos/gainage"
+  delt:"épaules", abs:"abdos/gainage", glute:"ischios/fessiers"
 };
 
 // banque : muscle -> [ {name, eq:[matériel accepté]} ]  (eq = au moins un suffit si 1 seul, sinon "et")
