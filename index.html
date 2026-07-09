@@ -92,6 +92,7 @@
   .chip.on{background:var(--steel);border-color:var(--steel);color:#fff}
   .ex .meta{font-size:12px;color:var(--dim);margin-top:2px}
   .ex .cue{font-size:11px;color:var(--gold);margin-top:3px;font-weight:600}
+  .ex .tech{font-size:12px;color:var(--dim);margin-top:5px;line-height:1.35;background:var(--panel2);border-left:3px solid var(--steel);padding:8px 10px;border-radius:0 8px 8px 0}
   .setrow{display:grid;grid-template-columns:30px 1fr 1fr 44px;gap:8px;align-items:center;
     padding:8px 14px;border-top:1px solid var(--line)}
   .setrow.main{grid-template-columns:38px 1fr 1fr 1fr 44px}
@@ -294,6 +295,26 @@ const DAYS = [
     {slot:"delt", sets:4, reps:"15", rest:45, alt:["Élévations latérales","Élévations latérales poulie","Oiseau (rear delt)","Développé Arnold léger","Élévations frontales","Reverse pec deck","Y-raise incliné","Élévations latérales machine","Oiseau poulie","Face pull","Élévations latérales élastique","Upright row corde"]},
   ]},
 ];
+
+/* ===== Consignes techniques : par gros lift (clé = lift) et par type d'accessoire (clé = slot) ===== */
+const TECH = {
+  squat:"Barre calée sur le haut du dos, grande inspiration puis gainage serré. Descends hanches et genoux ensemble (cuisses au moins parallèles), talons ancrés, genoux vers l'extérieur. Remonte en poussant le sol.",
+  bench:"Omoplates rétractées et basses, léger cambré, pieds bien ancrés. Descends la barre au bas des pecs, avant-bras verticaux, coudes ~45°. Pousse sans rebond ni décollage des fessiers.",
+  ohp:"Fessiers et abdos serrés, barre sur les clavicules. Recule légèrement la tête, pousse à la verticale puis avance la tête sous la barre, verrouille bras tendus au-dessus du crâne.",
+  deadlift:"Barre contre les tibias, dos neutre et poitrine haute, gaine fort. Pousse le sol avec les jambes, barre collée au corps, verrouille hanches et genoux en même temps. Ne courbe pas le dos.",
+  hinge:"Charnière de hanche : pousse les fessiers loin en arrière, dos neutre, genoux à peine fléchis. Sens l'étirement des ischios, remonte en serrant les fessiers. Ne courbe jamais le bas du dos.",
+  quad:"Amplitude complète, descente contrôlée, talons au sol. Concentre la poussée sur les quadriceps, pas d'à-coups ni d'élan.",
+  ham:"Mouvement lent, insiste sur la phase de retour (négative). Hanches fixes, pas de balancier, sens la contraction des ischios.",
+  squatvar:"Même rigueur que le squat lourd : gainage, amplitude, position basse contrôlée. C'est un travail de technique et de renfort.",
+  unilat:"Une jambe à la fois, buste droit, genou aligné avec la pointe du pied (ne rentre pas). Contrôle l'équilibre et la descente.",
+  vpull:"Tire avec les coudes vers le bas et l'arrière, omoplates qui descendent. Amplitude complète, contrôle la remontée, pas d'élan du corps.",
+  hpull:"Buste stable, tire vers le nombril, coudes le long du corps, serre les omoplates en fin de course. Ne triche pas avec le dos.",
+  row:"Buste penché fixe et dos neutre, tire vers le bas-ventre. Serre les omoplates, contrôle la descente, pas d'à-coups.",
+  arms:"Coudes fixes, amplitude complète. Contracte à fond en position courte, contrôle la descente. Ne balance pas la charge.",
+  incline:"Omoplates serrées, descends contrôlé jusqu'au haut des pecs, sens l'étirement. Pousse sans verrouiller sèchement les coudes.",
+  delt:"Charge légère, mouvement strict sans élan. Monte jusqu'à l'horizontale, contrôle la descente lentement.",
+  abs:"Mouvement lent, expire en contractant. Gainage : corps parfaitement aligné, fessiers et abdos serrés, ne creuse pas le bas du dos."
+};
 
 /* ===== Banque d'exercices pour le remplacement "pas cette séance" =====
    Chaque slot cible un groupe musculaire. Pour ce muscle, on a une grande liste
@@ -1067,6 +1088,7 @@ function renderToday(m){
     }
     const exKey = slotKey(curDay, ex.slot||('x'+ei));
     const movements = isMain ? null : exMovements(ex, curDay, dispName, exKey);
+    const techTxt = isMain ? (TECH[ex.lift]||'') : (TECH[ex.slot]||'');
     let sets='';
     let headMain = isMain
       ? `<div class="rowhead"><span></span><span>Charge</span><span>Reps${ex.targetReps?` /${weekReps(ex.targetReps,curWeek)}`:''}</span><span>RPE /${tgtRPE}</span><span></span></div>`
@@ -1236,8 +1258,9 @@ function renderToday(m){
         </div>
         ${active&&swapBtns?`<div class="swapwrap">${swapBtns}</div>`:''}
         ${picker}
-        <div class="meta">${ex.sets} × ${ex.reps} · repos ${ex.rest?Math.round(ex.rest/60*10)/10+' min':'—'}${isMain?` · départ ${baseLoad} kg`:''}</div>
+        <div class="meta">${ex.sets} × ${ex.reps} · repos ${ex.rest?Math.round(ex.rest/60*10)/10+' min':'—'}${isMain?` · départ ${baseLoad} kg`:` · vise 1–2 reps en réserve`}</div>
         ${ex.cue?`<div class="cue">${ex.cue}</div>`:''}
+        ${techTxt?`<div class="tech">🔧 ${techTxt}</div>`:''}
       </div>${headMain}${warm}${sets}</div>`;
   }).join('');
 
