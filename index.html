@@ -251,8 +251,8 @@ const DAYS = [
   {name:"Bas A (Squat)", ex:[
     {lift:"squat", main:true, name:"Squat", sets:4, reps:"5", targetReps:5, rest:180, cue:"Note reps + RPE à chaque série : la charge de la série suivante s'adapte."},
     {slot:"hinge", sets:3, reps:"8", rest:120, alt:["Soulevé de terre roumain","Hip thrust barre","Good morning","Rack pull","Hyperextension lestée","Hip thrust machine","Deadlift jambes tendues"]},
-    {slot:"quad", sets:3, reps:"10-12", rest:90, alt:["Presse à cuisses","Hack squat","Leg extension","Squat gobelet","Sissy squat","Leg press unilatéral","Cyclist squat"]},
-    {slot:"ham", sets:3, reps:"12", rest:75, alt:["Leg curl allongé","Leg curl assis","Nordic curl","Leg curl unilatéral","Swiss ball leg curl","Leg curl élastique","Glute-ham raise"]},
+    {slot:"quad", sets:3, reps:"10-12", rest:90, alt:["Presse à cuisses","Hack squat","Leg extension","Squat gobelet","Belt squat","Leg press unilatéral","Presse à cuisses pieds bas"]},
+    {slot:"ham", sets:3, reps:"12", rest:75, alt:["Leg curl allongé","Leg curl assis","Nordic curl","Leg curl unilatéral","Leg curl debout","Razor curl","Glute-ham raise"]},
     {superset:true, slot:"abs", sets:3, reps:"12 + 12", rest:60, alt:[
       "Relevé de jambes suspendu + extensions lombaires",
       "Crunch à la poulie + superman",
@@ -267,7 +267,7 @@ const DAYS = [
   {name:"Haut A (Couché)", ex:[
     {lift:"bench", main:true, name:"Développé couché", sets:4, reps:"5", targetReps:5, rest:180, cue:"Reps + RPE à chaque série."},
     {lift:"ohp", main:true, name:"Développé militaire", sets:3, reps:"6", targetReps:6, rest:150, cue:"Reps + RPE à chaque série."},
-    {slot:"vpull", sets:4, reps:"6-8", rest:120, alt:["Tractions lestées","Tirage vertical prise large","Tractions supination","Tirage vertical prise neutre","Tractions prise serrée","Tirage vertical unilatéral","Pull-up assisté lesté","Tirage vertical machine","Pull-up prise large","Tirage vertical corde","Muscle-up assisté"]},
+    {slot:"vpull", sets:4, reps:"6-8", rest:120, alt:["Tractions lestées","Tirage vertical prise large","Tractions supination","Tirage vertical prise neutre","Tractions prise serrée","Tirage vertical unilatéral","Pull-up assisté lesté","Tirage vertical machine","Pull-up prise large","Tirage vertical corde","Tractions prise neutre lestées"]},
     {slot:"hpull", sets:3, reps:"10-12", rest:90, alt:["Tirage horizontal poulie","Rowing haltère","Rowing T-bar","Tirage poitrine machine","Chest-supported row","Rowing bas poulie unilatéral","Rowing élastique","Tirage horizontal machine"]},
     {slot:"arms", sets:3, reps:"12", rest:75, alt:["Triceps + biceps (superset)","Barre au front + curl barre","Extensions poulie + curl marteau","Dips + curl incliné","Triceps overhead + curl poulie","Kickback + curl concentré","Extensions haltère + curl pupitre","Triceps machine + curl machine","Extensions corde + curl haltères","Dips lestés + curl araignée"]},
     {superset:true, slot:"abs", sets:3, reps:"12 + 30s", rest:60, alt:[
@@ -283,16 +283,16 @@ const DAYS = [
   ]},
   {name:"Bas B (Terre)", ex:[
     {lift:"deadlift", main:true, name:"Soulevé de terre", sets:4, reps:"4", targetReps:4, rest:210, cue:"Reps + RPE à chaque série."},
-    {slot:"squatvar", sets:3, reps:"8", rest:120, alt:["Squat avant","Squat bulgare","Squat pause","Box squat","Zercher squat","Squat au Smith","Front squat haltères","Squat tempo"]},
-    {slot:"unilat", sets:3, reps:"10 / jambe", rest:90, alt:["Fentes marchées","Fentes arrière","Step-up sur banc","Split squat bulgare","Fentes latérales","Pistol squat assisté","Fentes sautées","Fentes avant lestées","Step-up latéral","Lunge au Smith","Curtsy lunge","Fentes bulgares déficit"]},
-    {slot:"ham", sets:3, reps:"10-12", rest:90, alt:["Soulevé roumain haltères","Soulevé roumain barre","Soulevé roumain au Smith","Soulevé jambes tendues haltères","Good morning léger","Kettlebell swing","Pont fessier lesté","Hip thrust une jambe"]},
+    {slot:"squatvar", sets:3, reps:"8", rest:120, alt:["Squat avant","Squat aux épingles","Squat pause","Box squat","Zercher squat","Squat au Smith","Front squat haltères","Squat tempo"]},
+    {slot:"unilat", sets:3, reps:"10 / jambe", rest:90, alt:["Fentes marchées","Fentes arrière","Step-up sur banc","Split squat bulgare","Fentes avant lestées","Step-up latéral","Lunge au Smith","Fentes bulgares déficit"]},
+    {slot:"ham", sets:3, reps:"10-12", rest:90, alt:["Soulevé roumain haltères","Soulevé roumain barre","Soulevé roumain au Smith","Soulevé de terre déficit","Snatch-grip deadlift","Good morning léger","Pont fessier lesté","Hip thrust une jambe"]},
   ]},
   {name:"Haut B (Volume)", ex:[
     {lift:"bench", main:true, name:"Couché (technique)", sets:5, reps:"3", targetReps:3, rest:150, cue:"Jour technique : ~90% du couché lourd, plus léger et explosif. Reste loin de l'échec (ne force pas) — ça ne compte pas dans la progression, c'est de la vitesse.", loadFactor:0.9, rpeDelta:-1.5},
-    {slot:"incline", sets:4, reps:"8-10", rest:90, alt:["Développé incliné haltères","Développé incliné barre","Développé décliné","Développé haltères à plat","Développé prise serrée","Couché guidé (Smith)","Écarté incliné","Pec deck","Écarté poulie","Développé incliné machine","Pompes lestées","Développé décliné haltères"]},
+    {slot:"incline", sets:4, reps:"8-10", rest:90, alt:["Développé incliné haltères","Développé incliné barre","Développé couché prise serrée","Floor press","Spoto press (couché pause)","Développé haltères à plat","Couché guidé (Smith)","Écarté incliné","Pec deck","Développé incliné machine","Pompes lestées","Développé prise serrée"]},
     {slot:"row", sets:4, reps:"8", rest:120, alt:["Rowing barre","Rowing Yates","Rowing Pendlay","Rowing au Smith","Seal row","Inverted row","Rowing menton","Rowing poulie basse"]},
     {slot:"arms", sets:3, reps:"12", rest:75, alt:["Extensions corde + curl haltères","Dips + curl marteau","Barre au front + curl pupitre","Triceps machine + curl machine","Extensions haltère + curl incliné","Kickback + curl araignée","Triceps overhead + curl barre","Extensions poulie + curl concentré","Dips lestés + curl poulie","Pompes serrées + curl haltères"]},
-    {slot:"delt", sets:4, reps:"15", rest:45, alt:["Élévations latérales","Élévations latérales poulie","Oiseau (rear delt)","Développé Arnold léger","Élévations frontales","Reverse pec deck","Y-raise incliné","Élévations latérales machine","Oiseau poulie","Face pull","Élévations latérales élastique","Upright row corde"]},
+    {slot:"delt", sets:4, reps:"15", rest:45, alt:["Élévations latérales","Élévations latérales poulie","Oiseau (rear delt)","Développé Arnold léger","Oiseau haltères","Reverse pec deck","Y-raise incliné","Élévations latérales machine","Oiseau poulie","Face pull","Élévations latérales élastique","Rear delt machine"]},
   ]},
 ];
 
