@@ -1683,6 +1683,17 @@ async function toggleTestMode(){
 }
 
 /* ================= INIT ================= */
+// Met le cycle en cours à jour avec les listes d'exercices actuelles : retire les
+// exercices "fixés" manuellement qui n'existent plus (ils reprennent la rotation).
+function migrateCycleExos(C){
+  if(!C || !C.slotCustom) return;
+  for(const key in C.slotCustom){
+    const i=key.indexOf(':'); const di=+key.slice(0,i), slot=key.slice(i+1);
+    const day=DAYS[di]; const ex=day && day.ex.find(e=>e.slot===slot);
+    const list=ex && ex.alt;
+    if(!list || !list.includes(C.slotCustom[key])) delete C.slotCustom[key];
+  }
+}
 // Charge tout l'état depuis l'espace de données courant (réel ou test) puis rend l'écran.
 async function loadState(){
   PR={bench:130, deadlift:220, squat:190};
@@ -1692,7 +1703,7 @@ async function loadState(){
   const prm=await store.get('prmax'); if(prm)PRmax=prm; else { PRmax={...PR}; store.set('prmax',PRmax); }
   // garantit que les records absolus ne sont jamais < aux maxs de travail connus
   ['bench','deadlift','squat'].forEach(k=>{ if(PR[k]>PRmax[k]) PRmax[k]=PR[k]; });
-  const cy=await store.get('cycle'); if(cy){CYCLE=cy;curWeek=cy.week||1; if(!CYCLE.num)CYCLE.num=1; if(!CYCLE.nextOverride)CYCLE.nextOverride={}; if(!CYCLE.slotOverride)CYCLE.slotOverride={}; if(!CYCLE.slotCustom)CYCLE.slotCustom={}; if(!CYCLE.equip)CYCLE.equip={}; store.set('cycle',CYCLE);}
+  const cy=await store.get('cycle'); if(cy){CYCLE=cy;curWeek=cy.week||1; if(!CYCLE.num)CYCLE.num=1; if(!CYCLE.nextOverride)CYCLE.nextOverride={}; if(!CYCLE.slotOverride)CYCLE.slotOverride={}; if(!CYCLE.slotCustom)CYCLE.slotCustom={}; if(!CYCLE.equip)CYCLE.equip={}; migrateCycleExos(CYCLE); store.set('cycle',CYCLE);}
   const exw=await store.get('exWeights'); EXW = exw || {};
   const log=await store.get('log'); if(log)LOG=log;
   const ses=await store.get('session'); if(ses && sessionValid(ses)){SESSION=ses;curWeek=ses.week;curDay=ses.day;} else if(ses){ await store.set('session',null); }
