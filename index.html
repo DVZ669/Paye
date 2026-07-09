@@ -299,7 +299,7 @@ const DAYS = [
       "Toes-to-bar + reverse hyper"]},
   ]},
   {name:"Haut B (Volume)", ex:[
-    {lift:"bench", main:true, name:"Couché (technique)", sets:5, reps:"3", targetReps:3, rest:150, cue:"Plus léger : vitesse et technique. Reps + RPE à chaque série.", loadFactor:0.9},
+    {lift:"bench", main:true, name:"Couché (technique)", sets:5, reps:"3", targetReps:3, rest:150, cue:"Jour technique : ~90% du couché lourd, plus léger et explosif. Reste loin de l'échec (ne force pas) — ça ne compte pas dans la progression, c'est de la vitesse.", loadFactor:0.9, rpeDelta:-1.5},
     {slot:"incline", sets:4, reps:"8-10", rest:90, alt:["Développé incliné haltères","Développé incliné barre","Développé décliné","Développé haltères à plat","Développé prise serrée","Couché guidé (Smith)","Écarté incliné","Pec deck","Écarté poulie","Développé incliné machine","Pompes lestées","Développé décliné haltères"]},
     {slot:"row", sets:4, reps:"8", rest:120, alt:["Rowing barre","Rowing Yates","Rowing T-bar","Rowing poulie basse","Rowing haltère unilatéral","Rowing menton","Chest-supported row","Rowing au Smith","Seal row","Inverted row","Rowing Pendlay","Rowing élastique"]},
     {slot:"lat", sets:3, reps:"12", rest:75, alt:["Tirage vertical prise serrée","Pull-over poulie","Tirage bras tendus","Face pull","Tirage vertical prise large","Pull-over haltère","Straight-arm pulldown","Tractions prise serrée","Tirage vertical corde","Pull-over machine"]},
@@ -1075,7 +1075,8 @@ function renderToday(m){
   body+=day.ex.map((ex,ei)=>{
     const isMain=ex.main;
     const baseLoad=isMain?mainLoad(ex.lift,curWeek,ex.loadFactor):null;
-    const tgtRPE=rpeTarget(curWeek);
+    // RPE cible de CET exo : les jours "technique/vitesse" (allégés) visent un RPE plus bas
+    const tgtRPE=Math.max(5, rpeTarget(curWeek) + (ex.rpeDelta||0));
     // nom affiché (tient compte des remplacements de séance) — remonté ici car utilisé par les mouvements
     const rez=resolveExo(ex, curDay, 'cur');
     let dispName=rez.name;
