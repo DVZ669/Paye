@@ -1707,8 +1707,34 @@ async function loadState(){
   const cy=await store.get('cycle'); if(cy){CYCLE=cy;curWeek=cy.week||1; if(!CYCLE.num)CYCLE.num=1; if(!CYCLE.nextOverride)CYCLE.nextOverride={}; if(!CYCLE.slotOverride)CYCLE.slotOverride={}; if(!CYCLE.slotCustom)CYCLE.slotCustom={}; if(!CYCLE.equip)CYCLE.equip={}; migrateCycleExos(CYCLE); store.set('cycle',CYCLE);}
   const exw=await store.get('exWeights'); EXW = exw || {};
   const log=await store.get('log'); if(log)LOG=log;
+  backfillEXWfromLog();                 // récupère les poids manquants depuis l'historique
+  await store.set('exWeights', EXW);
   const ses=await store.get('session'); if(ses && sessionValid(ses)){SESSION=ses;curWeek=ses.week;curDay=ses.day;} else if(ses){ await store.set('session',null); }
   render();
+}
+// Reconstruit la mémoire des poids à partir des séances déjà enregistrées (Journal),
+// pour les exos dont le poids n'est pas encore mémorisé. Gère l'ancien format (séries
+// plates {w}) et le nouveau (par mouvement {m:[...]}). Les plus récentes priment.
+function backfillEXWfromLog(){
+  if(!Array.isArray(LOG)) return;
+  for(const rec of LOG){                // LOG = du plus récent au plus ancien
+    const exs = Array.isArray(rec.ex) ? rec.ex : [];
+    exs.forEach(e=>{
+      if(e.main) return;
+      const sets = Array.isArray(e.sets) ? e.sets : [];
+      if(e.movs && e.movs.length){       // nouveau format (par mouvement)
+        e.movs.forEach((mov,mi)=>{
+          if(EXW[mov.name]) return;
+          for(let k=sets.length-1;k>=0;k--){ const mm=sets[k].m && sets[k].m[mi]; if(!mm) continue;
+            if(mov.kind==='hold'){ const t=parseFloat(mm.t); if(!isNaN(t)&&t>0){ EXW[mov.name]={t}; break; } }
+            else if(mov.kind==='weight'){ const w=parseFloat(mm.w); if(!isNaN(w)&&w>0){ EXW[mov.name]={w}; break; } }
+          }
+        });
+      } else if(e.name && !EXW[e.name]){  // ancien format (séries plates)
+        for(let k=sets.length-1;k>=0;k--){ const w=parseFloat(sets[k].w); if(!isNaN(w)&&w>0){ EXW[e.name]={w}; break; } }
+      }
+    });
+  }
 }
 
 (async function(){
