@@ -1165,16 +1165,18 @@ function renderToday(m){
           const nm = mov.name;
           if(mov.kind==='hold'){
             const tVal = (mm.t!=null&&mm.t!=='')?mm.t:'';
+            const wValH = (mm.w!=null&&mm.w!=='')?mm.w:'';
             const df = mm.d||'';
             return `<div class="movline">
-              <div class="movname">${nm} <span class="tiny">tenue (sec)</span></div>
+              <div class="movname">${nm} <span class="tiny">charge (option) + tenue (sec)</span></div>
               <div class="movin">
-                <input inputmode="numeric" placeholder="sec" value="${tVal}" onchange="setMov(${ei},${s},${mi},'t',this.value)" ${active?'':'disabled'} style="max-width:90px">
-                <div class="diffs">
-                  <button class="df ${df==='easy'?'on':''}" onclick="${active?`setMovDiff(${ei},${s},${mi},'easy')`:''}">Facile</button>
-                  <button class="df ${df==='ok'?'on':''}" onclick="${active?`setMovDiff(${ei},${s},${mi},'ok')`:''}">Correct</button>
-                  <button class="df ${df==='hard'?'on':''}" onclick="${active?`setMovDiff(${ei},${s},${mi},'hard')`:''}">Dur</button>
-                </div>
+                <input inputmode="decimal" placeholder="kg" value="${wValH}" onchange="setMov(${ei},${s},${mi},'w',this.value)" ${active?'':'disabled'} style="max-width:85px">
+                <input inputmode="numeric" placeholder="sec" value="${tVal}" onchange="setMov(${ei},${s},${mi},'t',this.value)" ${active?'':'disabled'} style="max-width:85px">
+              </div>
+              <div class="diffs" style="margin-top:6px">
+                <button class="df ${df==='easy'?'on':''}" onclick="${active?`setMovDiff(${ei},${s},${mi},'easy')`:''}">Facile</button>
+                <button class="df ${df==='ok'?'on':''}" onclick="${active?`setMovDiff(${ei},${s},${mi},'ok')`:''}">Correct</button>
+                <button class="df ${df==='hard'?'on':''}" onclick="${active?`setMovDiff(${ei},${s},${mi},'hard')`:''}">Dur</button>
               </div>
             </div>`;
           }
@@ -1335,7 +1337,8 @@ function startSession(){
           const m = movements.map(mov=>{
             if(mov.kind==='hold'){
               const t=(EXW[mov.name]&&EXW[mov.name].t!=null)?EXW[mov.name].t:holdSecs(mov.repTok);
-              return {t: t!=null?String(t):'', d:''};
+              const wH=(EXW[mov.name]&&EXW[mov.name].w!=null)?EXW[mov.name].w:'';
+              return {t: t!=null?String(t):'', w: wH!==''?String(wH):'', d:''};
             }
             if(mov.kind==='body') return {r:''};
             const w=(EXW[mov.name]&&EXW[mov.name].w!=null)?EXW[mov.name].w:'';
@@ -1388,13 +1391,17 @@ async function finishSession(){
     const movs=exMovements(dex, SESSION.day, e.name, key);
     movs.forEach((mov,mi)=>{
       if(mov.kind==='hold'){
-        // temps : dernière tenue saisie ; difficulté : agrégée (un "Dur" prime, sinon un "Facile" -> +15s)
-        let lastT=null; const diffs=[];
+        // temps : dernière tenue saisie (+15s si "Facile") ; poids (optionnel) : dernier saisi
+        let lastT=null, lastWH=null; const diffs=[];
         e.sets.forEach(s=>{ const mm=s.m&&s.m[mi]; if(!mm)return;
           const t=parseFloat(mm.t); if(!isNaN(t)&&t>0) lastT=t;
+          const w=parseFloat(mm.w); if(!isNaN(w)&&w>0) lastWH=w;
           if(mm.d) diffs.push(mm.d);
         });
-        if(lastT!=null){ const bump=(diffs.includes('easy')&&!diffs.includes('hard'))?15:0; EXW[mov.name]={t:lastT+bump}; }
+        if(lastT!=null || lastWH!=null){
+          const o={}; if(lastT!=null){ const bump=(diffs.includes('easy')&&!diffs.includes('hard'))?15:0; o.t=lastT+bump; }
+          if(lastWH!=null) o.w=lastWH; EXW[mov.name]=o;
+        }
       } else if(mov.kind==='weight'){
         let lastW=null;
         e.sets.forEach(s=>{ const mm=s.m&&s.m[mi]; if(!mm)return; const w=parseFloat(mm.w); if(!isNaN(w)&&w>0) lastW=w; });
@@ -1629,7 +1636,7 @@ function renderHistory(m){
           const parts=e.movs.map((mov,mi)=>{
             let val='—';
             for(let k=e.sets.length-1;k>=0;k--){ const mm=e.sets[k].m&&e.sets[k].m[mi]; if(!mm)continue;
-              if(mov.kind==='hold'){ if(mm.t){ val=mm.t+'s'; break; } }
+              if(mov.kind==='hold'){ if(mm.t||mm.w){ val=(mm.w?mm.w+'kg ':'')+(mm.t?mm.t+'s':''); break; } }
               else if(mov.kind==='body'){ if(mm.r){ val=mm.r+' reps'; break; } }
               else { if(mm.w){ val=mm.w+'kg'; break; } }
             }
@@ -1726,7 +1733,8 @@ function backfillEXWfromLog(){
         e.movs.forEach((mov,mi)=>{
           if(EXW[mov.name]) return;
           for(let k=sets.length-1;k>=0;k--){ const mm=sets[k].m && sets[k].m[mi]; if(!mm) continue;
-            if(mov.kind==='hold'){ const t=parseFloat(mm.t); if(!isNaN(t)&&t>0){ EXW[mov.name]={t}; break; } }
+            if(mov.kind==='hold'){ const t=parseFloat(mm.t), w=parseFloat(mm.w);
+              if((!isNaN(t)&&t>0)||(!isNaN(w)&&w>0)){ const o={}; if(!isNaN(t)&&t>0)o.t=t; if(!isNaN(w)&&w>0)o.w=w; EXW[mov.name]=o; break; } }
             else if(mov.kind==='weight'){ const w=parseFloat(mm.w); if(!isNaN(w)&&w>0){ EXW[mov.name]={w}; break; } }
           }
         });
