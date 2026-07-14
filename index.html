@@ -126,6 +126,17 @@
   .rest .t{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums}
   .rest .lbl{font-size:11px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.85;font-weight:700}
   .rest button{background:rgba(255,255,255,0.2);border:none;color:#fff;font-weight:800;border-radius:9px;padding:8px 12px;font-size:13px;margin-left:8px}
+  /* chrono de tenue (gainage / Pallof) */
+  .hold{position:fixed;left:0;right:0;bottom:140px;z-index:46;display:none;padding:0 14px}
+  .hold.show{display:block}
+  .hold .inner{max-width:660px;margin:0 auto;background:var(--steel);color:#fff;border-radius:14px;
+    padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 30px rgba(0,0,0,0.5)}
+  .hold .t{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums}
+  .hold .lbl{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;opacity:0.9;font-weight:700}
+  .hold button{background:rgba(255,255,255,0.22);border:none;color:#fff;font-weight:800;border-radius:9px;padding:8px 12px;font-size:13px;margin-left:8px}
+  .chrono{background:rgba(91,141,239,0.15);border:1px solid rgba(91,141,239,0.45);color:var(--steel);
+    font-size:12px;font-weight:800;border-radius:9px;padding:8px 12px;white-space:nowrap;margin-top:6px}
+  .chrono:active{background:rgba(91,141,239,0.3)}
   nav{position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(11,13,18,0.92);backdrop-filter:blur(12px);
     border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 0 max(8px,env(safe-area-inset-bottom))}
   nav button{background:none;border:none;color:var(--dimmer);font-size:10px;font-weight:700;display:flex;
@@ -190,6 +201,13 @@
   <div class="inner">
     <div><div class="lbl">Repos</div><div class="t" id="restT">3:00</div></div>
     <div class="row"><button onclick="restAdd(30)">+30s</button><button onclick="restStop()">Passer</button></div>
+  </div>
+</div>
+
+<div class="hold" id="holdbar">
+  <div class="inner">
+    <div><div class="lbl" id="holdLbl">Tenue</div><div class="t"><span id="holdT">0</span>s</div></div>
+    <button onclick="holdStop()">Stop</button>
   </div>
 </div>
 
@@ -972,6 +990,48 @@ function restAdd(s){ if(!restEnd) return; restEnd += s*1000; store.set('restEnd'
 function restStop(){ clearInterval(restInt); restInt=null; restEnd=0; store.set('restEnd',0);
   const el=document.getElementById('rest'); if(el) el.classList.remove('show'); }
 
+/* ----- Chrono de TENUE (gainage / Pallof) : compte le temps demandé, vibre à la fin,
+   et se relance automatiquement pour le 2e côté si l'exo est unilatéral (latéral/Pallof). ----- */
+let holdInt=null, holdEnd=0, holdSecsVal=0, holdSide=1, holdSidesN=1;
+function startHoldFor(ei,s,mi,defSecs,sides){
+  let t=defSecs;
+  try{ const v=parseFloat(SESSION.ex[ei].sets[s].m[mi].t); if(!isNaN(v)&&v>0) t=v; }catch(e){}
+  startHold(t, sides);
+}
+function startHold(secs, sides){
+  holdSecsVal=Math.max(1, Math.round(secs)||30); holdSidesN=sides>1?2:1; holdSide=1;
+  requestNotifPermission(); runHoldSide();
+}
+function runHoldSide(){
+  holdEnd=Date.now()+holdSecsVal*1000;
+  const el=document.getElementById('holdbar'); if(el) el.classList.add('show');
+  holdTick(); clearInterval(holdInt); holdInt=setInterval(holdTick,200);
+}
+function holdTick(){
+  if(!holdEnd) return;
+  const left=Math.ceil((holdEnd-Date.now())/1000);
+  const t=document.getElementById('holdT'); if(t) t.textContent=Math.max(0,left);
+  const lbl=document.getElementById('holdLbl'); if(lbl) lbl.textContent = holdSidesN>1 ? ('Tenue · côté '+holdSide+'/'+holdSidesN) : 'Tenue';
+  if(left<=0) holdSideDone();
+}
+function holdSideDone(){
+  clearInterval(holdInt); holdInt=null; holdEnd=0;
+  if(navigator.vibrate) navigator.vibrate([250,100,250]);
+  if(holdSide<holdSidesN){
+    holdSide++;
+    const lbl=document.getElementById('holdLbl'); if(lbl) lbl.textContent='Change de côté…';
+    notify('Change de côté','Côté '+holdSide+' — c\'est reparti.');
+    toast('Côté '+holdSide+' 🔄');
+    setTimeout(()=>{ if(document.getElementById('holdbar').classList.contains('show')) runHoldSide(); }, 3000);
+  } else {
+    const el=document.getElementById('holdbar'); if(el) el.classList.remove('show');
+    notify('Tenue terminée 💪','Repos, puis série suivante.');
+    toast('Tenue terminée');
+  }
+}
+function holdStop(){ clearInterval(holdInt); holdInt=null; holdEnd=0; holdSide=1; holdSidesN=1;
+  const el=document.getElementById('holdbar'); if(el) el.classList.remove('show'); }
+
 /* ----- Notifications (fin de repos) ----- */
 function requestNotifPermission(){
   try{ if('Notification' in window && Notification.permission==='default'){ Notification.requestPermission(); } }catch(e){}
@@ -1167,16 +1227,19 @@ function renderToday(m){
             const tVal = (mm.t!=null&&mm.t!=='')?mm.t:'';
             const wValH = (mm.w!=null&&mm.w!=='')?mm.w:'';
             const df = mm.d||'';
+            const holdSides = /latéral|lateral|pallof|unilat|copenhagen|\bside\b/i.test(nm) ? 2 : 1;
+            const defSecs = holdSecs(mov.repTok) || 30;
             return `<div class="movline">
-              <div class="movname">${nm} <span class="tiny">charge (option) + tenue (sec)</span></div>
+              <div class="movname">${nm} <span class="tiny">charge (option) + tenue (sec)${holdSides>1?' · par côté':''}</span></div>
               <div class="movin">
                 <input inputmode="decimal" placeholder="kg" value="${wValH}" onchange="setMov(${ei},${s},${mi},'w',this.value)" ${active?'':'disabled'} style="max-width:85px">
                 <input inputmode="numeric" placeholder="sec" value="${tVal}" onchange="setMov(${ei},${s},${mi},'t',this.value)" ${active?'':'disabled'} style="max-width:85px">
               </div>
-              <div class="diffs" style="margin-top:6px">
+              <div class="diffs" style="margin-top:6px;flex-wrap:wrap">
                 <button class="df ${df==='easy'?'on':''}" onclick="${active?`setMovDiff(${ei},${s},${mi},'easy')`:''}">Facile</button>
                 <button class="df ${df==='ok'?'on':''}" onclick="${active?`setMovDiff(${ei},${s},${mi},'ok')`:''}">Correct</button>
                 <button class="df ${df==='hard'?'on':''}" onclick="${active?`setMovDiff(${ei},${s},${mi},'hard')`:''}">Dur</button>
+                ${active?`<button class="chrono" style="margin-top:0" onclick="startHoldFor(${ei},${s},${mi},${defSecs},${holdSides})">▶ Chrono${holdSides>1?' ×2 côtés':''}</button>`:''}
               </div>
             </div>`;
           }
@@ -1753,7 +1816,7 @@ function backfillEXWfromLog(){
   if(re && re>Date.now()){ restEnd=re; const el=document.getElementById('rest'); if(el)el.classList.add('show'); restTick(); clearInterval(restInt); restInt=setInterval(restTick,250); }
   else if(re){ await store.set('restEnd',0); }
   // au retour au premier plan, on recalcule immédiatement le temps de repos restant
-  document.addEventListener('visibilitychange',()=>{ if(!document.hidden && restEnd) restTick(); });
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden && restEnd) restTick(); if(!document.hidden && holdEnd) holdTick(); });
 })();
 
 /* ================= PWA : mode hors-ligne + mise à jour automatique ================= */
